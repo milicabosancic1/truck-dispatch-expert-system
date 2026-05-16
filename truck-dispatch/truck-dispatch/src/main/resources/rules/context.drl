@@ -1,0 +1,6 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
+
+// Nivo 0 - Context rules will go here
