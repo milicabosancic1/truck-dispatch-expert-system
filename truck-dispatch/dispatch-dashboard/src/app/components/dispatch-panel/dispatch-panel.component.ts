@@ -68,7 +68,7 @@ export class DispatchPanelComponent {
         hasAdrEquipment: false, distanceToOriginKm: 10, daysSinceRefrigerationService: 5
       }],
       drivers: [{
-        id: 'D-01', available: true, workingHoursToday: 4, license: 'BCDE',
+        id: 'D-01', available: true, workingHoursToday: 4, license: 'CE',
         hasAdrLicense: false, fatigueLevel: 2, yearsOfExperience: 5, recentRouteIds: []
       }],
       routes: [{
@@ -97,7 +97,7 @@ export class DispatchPanelComponent {
 
   addDriver() {
     this.request.drivers.push({
-      id: '', available: true, workingHoursToday: 0, license: 'B',
+      id: '', available: true, workingHoursToday: 0, license: 'CE',
       hasAdrLicense: false, fatigueLevel: 0, yearsOfExperience: 1, recentRouteIds: []
     });
   }

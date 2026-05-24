@@ -71,11 +71,11 @@ $s1 = @{
            hasAdrEquipment=$false; distanceToOriginKm=3; daysSinceRefrigerationService=0 }
     )
     drivers = @(
-        @{ id="D-01"; available=$true; workingHoursToday=3; license="BCDE";
+        @{ id="D-01"; available=$true; workingHoursToday=3; license="CE";
            hasAdrLicense=$false; fatigueLevel=1; yearsOfExperience=8; recentRouteIds=@() },
         @{ id="D-02"; available=$true; workingHoursToday=2; license="CE";
            hasAdrLicense=$true;  fatigueLevel=0; yearsOfExperience=12; recentRouteIds=@() },
-        @{ id="D-03"; available=$true; workingHoursToday=5; license="B";
+        @{ id="D-03"; available=$true; workingHoursToday=5; license="CE";
            hasAdrLicense=$false; fatigueLevel=3; yearsOfExperience=2; recentRouteIds=@() }
     )
     routes = @(
@@ -123,9 +123,9 @@ $s2 = @{
            hasAdrEquipment=$false; distanceToOriginKm=6; daysSinceRefrigerationService=0 }
     )
     drivers = @(
-        @{ id="D-04"; available=$true; workingHoursToday=1; license="BCDE";
+        @{ id="D-04"; available=$true; workingHoursToday=1; license="CE";
            hasAdrLicense=$true;  fatigueLevel=0; yearsOfExperience=15; recentRouteIds=@() },
-        @{ id="D-05"; available=$true; workingHoursToday=4; license="B";
+        @{ id="D-05"; available=$true; workingHoursToday=4; license="CE";
            hasAdrLicense=$false; fatigueLevel=2; yearsOfExperience=3; recentRouteIds=@() }
     )
     routes = @(
@@ -168,7 +168,7 @@ $s3 = @{
            hasAdrEquipment=$false; distanceToOriginKm=4; daysSinceRefrigerationService=3 }
     )
     drivers = @(
-        @{ id="D-06"; available=$true; workingHoursToday=6; license="BCDE";
+        @{ id="D-06"; available=$true; workingHoursToday=6; license="CE";
            hasAdrLicense=$false; fatigueLevel=4; yearsOfExperience=6; recentRouteIds=@() }
     )
     routes = @(
