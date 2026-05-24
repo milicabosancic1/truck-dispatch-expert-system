@@ -1,0 +1,27 @@
+<div class="dashboard">
+  <header class="dashboard-header">
+    <h1 class="dashboard-title">TruckDispatch</h1>
+    <nav class="tabs">
+      <button class="tab-btn" [class.active]="tab === 'dispatch'" (click)="tab = 'dispatch'">Dispatch</button>
+      <button class="tab-btn" [class.active]="tab === 'events'" (click)="tab = 'events'">Fleet Events</button>
+      <button class="tab-btn" [class.active]="tab === 'alarms'" (click)="tab = 'alarms'">Active Alarms</button>
+    </nav>
+  </header>
+
+  <main class="dashboard-body">
+    @if (tab === 'dispatch') {
+      <div class="dispatch-layout">
+        <app-dispatch-panel (resultReady)="onResult($event)" />
+        @if (result) {
+          <app-results-panel [result]="result" />
+        }
+      </div>
+    }
+    @if (tab === 'events') {
+      <app-cep-panel />
+    }
+    @if (tab === 'alarms') {
+      <app-alarms-panel />
+    }
+  </main>
+</div>

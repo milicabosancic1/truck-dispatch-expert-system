@@ -3,3 +3,7 @@
 .claude/
 *.pdf
 .github/
+target/
+node_modules/
+dist/
+.angular/

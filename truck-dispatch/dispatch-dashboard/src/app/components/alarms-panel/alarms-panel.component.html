@@ -1,0 +1,41 @@
+<div class="panel">
+  <div class="panel-header">
+    <h2>Active Alarms</h2>
+    <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">
+      {{ loading ? 'Loading...' : 'Refresh' }}
+    </button>
+  </div>
+
+  @if (error) {
+    <div class="alert-error">{{ error }}</div>
+  }
+
+  <section class="card">
+    @if (alarms.length === 0 && !loading) {
+      <p class="empty-state">No active alarms.</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Entity</th>
+              <th>Message</th>
+              <th>Affected</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (alarm of alarms; track $index) {
+              <tr>
+                <td><span class="badge badge-alarm">{{ alarm.type }}</span></td>
+                <td>{{ alarm.entityId }}</td>
+                <td>{{ alarm.message }}</td>
+                <td>{{ alarm.affectedCount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

@@ -1,0 +1,58 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.RejectionReason;
+import com.truckdispatch.truck_dispatch.model.OrderGroupMembership;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+
+global java.util.List messages;
+
+// BACKWARD CHAINING â€” Query 1: jeUzrokNedodele
+// Dijagnostika neuspeÅ¡nih dodela â€” rekurzivno traÅ¾i uzroke
+
+query "jeUzrokNedodele" (String uzrok, String posledica)
+    RejectionReason( cause == uzrok, effect == posledica )
+    or
+    ( RejectionReason( cause == uzrok, $medjukorak : effect ) and
+      jeUzrokNedodele( $medjukorak, posledica; ) )
+end
+
+// Pravilo koje koristi BC query â€” dijagnostika zimskih uslova
+rule "BC_Diagnosis_Winter"
+    salience 20
+    when
+        $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES || status == OrderStatus.UNFEASIBLE)
+        jeUzrokNedodele( "ZimaRedukujNosivost", "NalogNedodeljen"; )
+    then
+        messages.add("Order " + $order.getId() + " DIAGNOSIS: winter conditions reduced effective capacity â€” no truck available!");
+end
+
+// Pravilo koje vraca sve uzroke nedodele (unbound uzrok)
+rule "BC_Diagnosis_AllCauses"
+    salience 20
+    when
+        $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES || status == OrderStatus.UNFEASIBLE)
+        jeUzrokNedodele( $uzrok, "NalogNedodeljen"; )
+    then
+        messages.add("Order " + $order.getId() + " DIAGNOSIS cause: " + $uzrok);
+end
+
+// BACKWARD CHAINING â€” Query 2: pripadaKategorijiNaloga
+// Hijerarhija tipova naloga â€” rekurzivna klasifikacija
+
+query "pripadaKategorijiNaloga" (String stavka, String kategorija)
+    OrderGroupMembership( item == stavka, group == kategorija )
+    or
+    ( OrderGroupMembership( item == stavka, $medjukat : group ) and
+      pripadaKategorijiNaloga( $medjukat, kategorija; ) )
+end
+
+// Pravilo: specijalni nalog â€” proveri opremu kamiona
+rule "BC_SpecialOrderCheck"
+    salience 20
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, $type : cargoType.name())
+        pripadaKategorijiNaloga( $type, "NalogSpecijalni"; )
+    then
+        messages.add("Order " + $order.getId() + " is SPECIAL (" + $type + ") â€” verify truck equipment!");
+end

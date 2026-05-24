@@ -1,0 +1,30 @@
+template header
+truckType
+routeType
+scoreBonus
+
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.ValidPair;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Route;
+import com.truckdispatch.truck_dispatch.model.TruckType;
+import com.truckdispatch.truck_dispatch.model.RoadType;
+
+global java.util.List messages;
+
+template "TruckTypeRouteBonus"
+
+// Auto-generated: @{truckType} kamion na @{routeType} ruti → score +@{scoreBonus}
+rule "TruckTypeRoute_@{truckType}_@{routeType}"
+    salience 595
+    no-loop true
+    when
+        $pair  : ValidPair($truck : truck, $order : order)
+        Truck(this == $truck, type == TruckType.@{truckType})
+        Route(id == $order.routeId, roadType == RoadType.@{routeType})
+    then
+        modify($pair) { setScore($pair.getScore() + @{scoreBonus}); }
+end
+
+end template

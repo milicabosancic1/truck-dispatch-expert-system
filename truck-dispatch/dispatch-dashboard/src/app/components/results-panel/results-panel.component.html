@@ -1,0 +1,76 @@
+<div class="panel">
+  <div class="panel-header">
+    <h2>Dispatch Result</h2>
+  </div>
+
+  <section class="card">
+    <h3>Messages ({{ result.messages.length }})</h3>
+    <ul class="message-list">
+      @for (msg of result.messages; track $index) {
+        <li>{{ msg }}</li>
+      }
+    </ul>
+  </section>
+
+  <section class="card">
+    <h3>Processed Orders ({{ result.processedOrders.length }})</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Destination</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Cargo</th>
+            <th>Truck</th>
+            <th>Driver</th>
+            <th>Delay (min)</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of result.processedOrders; track order.id) {
+            <tr [class]="'status-' + order.status.toLowerCase()">
+              <td>{{ order.id }}</td>
+              <td>{{ order.destination }}</td>
+              <td><span class="badge badge-{{ order.status.toLowerCase() }}">{{ order.status }}</span></td>
+              <td>{{ order.priority }}</td>
+              <td>{{ order.cargoType }}</td>
+              <td>{{ order.assignedTruckId || '—' }}</td>
+              <td>{{ order.assignedDriverId || '—' }}</td>
+              <td>{{ order.delayMin ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  @if (result.alarms.length > 0) {
+    <section class="card">
+      <h3>Alarms ({{ result.alarms.length }})</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Entity</th>
+              <th>Message</th>
+              <th>Affected</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (alarm of result.alarms; track $index) {
+              <tr>
+                <td><span class="badge badge-alarm">{{ alarm.type }}</span></td>
+                <td>{{ alarm.entityId }}</td>
+                <td>{{ alarm.message }}</td>
+                <td>{{ alarm.affectedCount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

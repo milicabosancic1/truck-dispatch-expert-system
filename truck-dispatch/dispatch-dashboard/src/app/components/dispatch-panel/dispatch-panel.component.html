@@ -1,0 +1,162 @@
+<div class="panel">
+  <div class="panel-header">
+    <h2>Dispatch Request</h2>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="loadDemo()">Load Demo</button>
+      <button class="btn btn-secondary" (click)="reset()">Reset</button>
+      <button class="btn btn-primary" (click)="submit()" [disabled]="loading">
+        {{ loading ? 'Processing...' : 'Run Dispatch' }}
+      </button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert-error">{{ error }}</div>
+  }
+
+  <section class="card">
+    <h3>Context</h3>
+    <div class="form-row">
+      <label>Temperature (°C)
+        <input type="number" [(ngModel)]="request.temperature" />
+      </label>
+      <label>Hour (0–23)
+        <input type="number" min="0" max="23" [(ngModel)]="request.hour" />
+      </label>
+      <label>Day of Week (1=Mon … 7=Sun)
+        <input type="number" min="1" max="7" [(ngModel)]="request.dayOfWeek" />
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>Orders ({{ request.orders.length }})</h3>
+      <button class="btn btn-add" (click)="addOrder()">+ Add</button>
+    </div>
+    @for (order of request.orders; track $index) {
+      <div class="item-card">
+        <div class="item-remove">
+          <button class="btn btn-remove" (click)="removeOrder($index)">✕</button>
+        </div>
+        <div class="form-row">
+          <label>ID <input [(ngModel)]="order.id" /></label>
+          <label>Destination <input [(ngModel)]="order.destination" /></label>
+          <label>Weight (kg) <input type="number" [(ngModel)]="order.weightKg" /></label>
+          <label>Deadline (min) <input type="number" [(ngModel)]="order.deliveryDeadlineMin" /></label>
+          <label>Route ID <input [(ngModel)]="order.routeId" /></label>
+          <label>Cargo Type
+            <select [(ngModel)]="order.cargoType">
+              @for (t of cargoTypes; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </label>
+          <label>Priority
+            <select [(ngModel)]="order.priority">
+              @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+            </select>
+          </label>
+          <label>Status
+            <select [(ngModel)]="order.status">
+              <option value="NEW">NEW</option>
+              <option value="VALID">VALID</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>Trucks ({{ request.trucks.length }})</h3>
+      <button class="btn btn-add" (click)="addTruck()">+ Add</button>
+    </div>
+    @for (truck of request.trucks; track $index) {
+      <div class="item-card">
+        <div class="item-remove">
+          <button class="btn btn-remove" (click)="removeTruck($index)">✕</button>
+        </div>
+        <div class="form-row">
+          <label>ID <input [(ngModel)]="truck.id" /></label>
+          <label>Location <input [(ngModel)]="truck.location" /></label>
+          <label>Max Capacity (kg) <input type="number" [(ngModel)]="truck.maxCapacityKg" /></label>
+          <label>Fuel (%) <input type="number" min="0" max="100" [(ngModel)]="truck.fuelPercent" /></label>
+          <label>Distance to origin (km) <input type="number" [(ngModel)]="truck.distanceToOriginKm" /></label>
+          <label>Days since refrig. service <input type="number" [(ngModel)]="truck.daysSinceRefrigerationService" /></label>
+          <label>Type
+            <select [(ngModel)]="truck.type">
+              @for (t of truckTypes; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </label>
+          <label>Status
+            <select [(ngModel)]="truck.status">
+              @for (s of truckStatuses; track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="truck.hasRefrigerationUnit" /> Refrigeration unit
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="truck.hasAdrEquipment" /> ADR equipment
+          </label>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>Drivers ({{ request.drivers.length }})</h3>
+      <button class="btn btn-add" (click)="addDriver()">+ Add</button>
+    </div>
+    @for (driver of request.drivers; track $index) {
+      <div class="item-card">
+        <div class="item-remove">
+          <button class="btn btn-remove" (click)="removeDriver($index)">✕</button>
+        </div>
+        <div class="form-row">
+          <label>ID <input [(ngModel)]="driver.id" /></label>
+          <label>License <input [(ngModel)]="driver.license" /></label>
+          <label>Working hours today <input type="number" step="0.5" [(ngModel)]="driver.workingHoursToday" /></label>
+          <label>Fatigue level (0–10) <input type="number" min="0" max="10" [(ngModel)]="driver.fatigueLevel" /></label>
+          <label>Years of experience <input type="number" [(ngModel)]="driver.yearsOfExperience" /></label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="driver.available" /> Available
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="driver.hasAdrLicense" /> ADR license
+          </label>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>Routes ({{ request.routes.length }})</h3>
+      <button class="btn btn-add" (click)="addRoute()">+ Add</button>
+    </div>
+    @for (route of request.routes; track $index) {
+      <div class="item-card">
+        <div class="item-remove">
+          <button class="btn btn-remove" (click)="removeRoute($index)">✕</button>
+        </div>
+        <div class="form-row">
+          <label>ID <input [(ngModel)]="route.id" /></label>
+          <label>Distance (km) <input type="number" [(ngModel)]="route.distanceKm" /></label>
+          <label>Est. time (h) <input type="number" step="0.5" [(ngModel)]="route.estimatedTimeHours" /></label>
+          <label>Max capacity (kg) <input type="number" [(ngModel)]="route.maxCapacityKg" /></label>
+          <label>Max speed (km/h) <input type="number" [(ngModel)]="route.maxSpeedKmh" /></label>
+          <label>Road type
+            <select [(ngModel)]="route.roadType">
+              @for (r of roadTypes; track r) { <option [value]="r">{{ r }}</option> }
+            </select>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="route.hasTunnel" /> Has tunnel
+          </label>
+        </div>
+      </div>
+    }
+  </section>
+</div>
