@@ -1,0 +1,48 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Driver;
+import com.truckdispatch.truck_dispatch.model.CandidateTruck;
+import com.truckdispatch.truck_dispatch.model.ValidPair;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.CargoType;
+
+global java.util.List messages;
+
+// NIVO 3: Provera vozaÄa i kreiranje ValidPair
+
+rule "CreateValidPair"
+    salience 700
+    when
+        $candidate : CandidateTruck($order : order, $truck : truck)
+        $driver : Driver(
+            available == true,
+            workingHoursToday < 8.0,
+            fatigueLevel < 7,
+            isLicensedFor($truck.type) == true
+        )
+        not ValidPair(order == $order, truck == $truck, driver == $driver)
+    then
+        insert(new ValidPair($order, $truck, $driver, 100));
+end
+
+rule "ExcludeDriver_NoADR"
+    salience 710
+    when
+        $candidate : CandidateTruck($order : order, order.cargoType == CargoType.OPASNA_ROBA)
+        $driver : Driver(hasAdrLicense == false)
+    then
+        messages.add("Driver " + $driver.getId() + " excluded â€” no ADR license");
+end
+
+rule "NoValidPairFound"
+    salience 10
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID)
+        not (exists ValidPair(order == $order))
+        not (exists CandidateTruck(order == $order))
+    then
+        modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
+        messages.add("Order " + $order.getId() + " waiting for resources. Run BC diagnostics.");
+end
