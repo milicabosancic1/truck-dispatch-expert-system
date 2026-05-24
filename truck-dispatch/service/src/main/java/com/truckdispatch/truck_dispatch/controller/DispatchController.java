@@ -30,7 +30,9 @@ public class DispatchController {
      */
     @PostMapping("/process")
     public ResponseEntity<DispatchResult> process(@RequestBody DispatchRequest request) {
-        return ResponseEntity.ok(dispatchService.processDispatch(request));
+        DispatchResult result = dispatchService.processDispatch(request);
+        cepService.syncFleetState(request.getTrucks(), result.getProcessedOrders());
+        return ResponseEntity.ok(result);
     }
 
     /**
