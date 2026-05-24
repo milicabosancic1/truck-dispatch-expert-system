@@ -1,0 +1,132 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.ValidPair;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Driver;
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Route;
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
+import com.truckdispatch.truck_dispatch.model.TruckType;
+import com.truckdispatch.truck_dispatch.model.CargoType;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
+
+global java.util.List messages;
+
+// NIVO 3+: Score sistem
+// Inicijalni score=100, svako pravilo dodaje bonus ili malus
+
+// +25: kamion blizu polazista (< 10km)
+rule "Score_BonusProximity"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($truck : truck)
+        Truck(this == $truck, distanceToOriginKm < 10)
+    then
+        modify($pair) { setScore($pair.getScore() + 25); }
+end
+
+// +20: vozac poznaje rutu (vozio je u poslednjih 7 dana)
+rule "Score_BonusFamiliarRoute"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($driver : driver, $order : order)
+        Driver(this == $driver, recentRouteIds contains $order.routeId)
+    then
+        modify($pair) { setScore($pair.getScore() + 20); }
+end
+
+// +15: visoka iskoriÅ¡Ä‡enost kamiona (teret > 90% nosivosti)
+rule "Score_BonusHighUtilization"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($order : order, $truck : truck)
+        DeliveryOrder(this == $order, $weight : weightKg)
+        Truck(this == $truck, maxCapacityKg * 0.90 < $weight)
+    then
+        modify($pair) { setScore($pair.getScore() + 15); }
+end
+
+// +15: mali kamion u jutarnjem spicu
+rule "Score_BonusContext_MorningSmall"
+    salience 600
+    no-loop true
+    when
+        DispatchContext(context == OperationalContext.MORNING_PEAK)
+        $pair : ValidPair(truck.type == TruckType.SMALL)
+    then
+        modify($pair) { setScore($pair.getScore() + 15); }
+end
+
+// +10: nizak umor vozaÄa (umor <= 3)
+rule "Score_BonusLowFatigue"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($driver : driver)
+        Driver(this == $driver, fatigueLevel <= 3)
+    then
+        modify($pair) { setScore($pair.getScore() + 10); }
+end
+
+// -25: kamion malo goriva (< 40%)
+rule "Score_MalusFuel"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($truck : truck)
+        Truck(this == $truck, fuelPercent < 40)
+    then
+        modify($pair) { setScore($pair.getScore() - 25); }
+        messages.add("Warning: truck " + $truck.getId() + " has < 40% fuel (score malus -25)");
+end
+
+// -30: visok umor vozaÄa (umor >= 6)
+rule "Score_MalusHighFatigue"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($driver : driver)
+        Driver(this == $driver, fatigueLevel >= 6)
+    then
+        modify($pair) { setScore($pair.getScore() - 30); }
+end
+
+// -35: ADR nalog + neiskusan vozaÄ (< 3 godine)
+rule "Score_MalusADR_Inexperienced"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($order : order, $driver : driver)
+        DeliveryOrder(this == $order, cargoType == CargoType.OPASNA_ROBA)
+        Driver(this == $driver, yearsOfExperience < 3)
+    then
+        modify($pair) { setScore($pair.getScore() - 35); }
+        messages.add("ADR order " + $order.getId() + " â€” driver " + $driver.getId() + " is inexperienced (malus -35)");
+end
+
+// -20: zimski uslovi + duga ruta (> 200km)
+rule "Score_MalusWinter_LongRoute"
+    salience 600
+    no-loop true
+    when
+        DispatchContext(context == OperationalContext.WINTER_CONDITIONS)
+        $pair : ValidPair($order : order)
+        $route : Route(id == $order.routeId, distanceKm > 200)
+    then
+        modify($pair) { setScore($pair.getScore() - 20); }
+end
+
+// -20: lomljivo + brza ruta (max brzina > 80 km/h)
+rule "Score_MalusFragile_FastRoute"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($order : order)
+        DeliveryOrder(this == $order, cargoType == CargoType.LOMLJIVO)
+        $route : Route(id == $order.routeId, maxSpeedKmh > 80)
+    then
+        modify($pair) { setScore($pair.getScore() - 20); }
+end
