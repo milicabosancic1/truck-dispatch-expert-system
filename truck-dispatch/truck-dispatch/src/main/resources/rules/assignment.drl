@@ -1,0 +1,78 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Driver;
+import com.truckdispatch.truck_dispatch.model.ValidPair;
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.OrderPriority;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
+import com.truckdispatch.truck_dispatch.model.CargoType;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
+
+global java.util.List messages;
+
+// NIVO 4: Finalna dodela
+
+rule "FinalAssignment_Urgent"
+    salience 100
+    no-loop true
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID,
+                               priority == OrderPriority.URGENT || priority == OrderPriority.CRITICAL_DELIVERY)
+        $pair   : ValidPair(order == $order, $score : score, $truck : truck, $driver : driver)
+        not ValidPair(order == $order, score > $score)
+    then
+        modify($truck)  { setStatus(TruckStatus.BUSY); }
+        modify($driver) { setAvailable(false); }
+        modify($order)  {
+            setStatus(OrderStatus.ASSIGNED),
+            setAssignedTruckId($truck.getId()),
+            setAssignedDriverId($driver.getId())
+        }
+        messages.add("URGENT order " + $order.getId() + " -> truck " + $truck.getId()
+                + " + driver " + $driver.getId() + " (score=" + $score + ")");
+end
+
+rule "FinalAssignment_Normal"
+    salience 50
+    no-loop true
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID,
+                               priority != OrderPriority.URGENT,
+                               priority != OrderPriority.CRITICAL_DELIVERY)
+        $pair   : ValidPair(order == $order, $score : score, $truck : truck, $driver : driver)
+        not ValidPair(order == $order, score > $score)
+    then
+        modify($truck)  { setStatus(TruckStatus.BUSY); }
+        modify($driver) { setAvailable(false); }
+        modify($order)  {
+            setStatus(OrderStatus.ASSIGNED),
+            setAssignedTruckId($truck.getId()),
+            setAssignedDriverId($driver.getId())
+        }
+        messages.add("Order " + $order.getId() + " -> truck " + $truck.getId()
+                + " + driver " + $driver.getId() + " (score=" + $score + ")");
+end
+
+// NIVO 4: Post-validacije nakon dodele
+
+rule "PostValidation_RefrigerationService"
+    salience 40
+    when
+        $order : DeliveryOrder(status == OrderStatus.ASSIGNED, cargoType == CargoType.RASHLADNI,
+                               $truckId : assignedTruckId)
+        $truck : Truck(id == $truckId, daysSinceRefrigerationService > 30)
+    then
+        messages.add("WARNING: truck " + $truck.getId() + " refrigeration system not serviced in >30 days!");
+end
+
+rule "PostValidation_LowFuel"
+    salience 40
+    when
+        $order : DeliveryOrder(status == OrderStatus.ASSIGNED, $truckId : assignedTruckId)
+        $truck : Truck(id == $truckId, fuelPercent < 20)
+    then
+        messages.add("WARNING: truck " + $truck.getId() + " has < 20% fuel â€” refuel before departure!");
+end
