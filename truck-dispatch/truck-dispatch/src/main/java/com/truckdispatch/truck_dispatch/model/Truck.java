@@ -17,4 +17,5 @@ public class Truck {
     private boolean hasRefrigerationUnit;
     private boolean hasAdrEquipment;
     private int daysSinceRefrigerationService;
+    private double distanceToOriginKm;
 }

@@ -1,0 +1,14 @@
+package com.truckdispatch.truck_dispatch.model;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DelayPropagation {
+    private DeliveryOrder primary;
+    private DeliveryOrder affected;
+    private int delayMin;
+}
