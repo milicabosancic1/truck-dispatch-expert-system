@@ -3,4 +3,91 @@ package rules;
 import com.truckdispatch.truck_dispatch.model.DispatchContext;
 import com.truckdispatch.truck_dispatch.model.OperationalContext;
 
-// Nivo 0 - Context rules will go here
+global java.util.List messages;
+
+// ============================================================
+// NIVO 0: Kontekstualizacija
+// salience 1000 — mora opaliti PRE svih validation/filtering pravila
+// ============================================================
+
+// JUTARNJI SPIC: 06:00-09:00, radni dan (pon=1 ... pet=5)
+rule "Context_MorningPeak"
+    salience 1000
+    when
+        $hour : Integer(this >= 6, this < 9)
+        $day  : Long(this >= 1, this <= 5)
+        not DispatchContext(context == OperationalContext.MORNING_PEAK)
+    then
+        DispatchContext ctx = new DispatchContext();
+        ctx.setContext(OperationalContext.MORNING_PEAK);
+        ctx.setCapacityFactor(1.0);
+        ctx.setFleetFactor(1.0);
+        ctx.setDelayThresholdMin(20);
+        insert(ctx);
+        messages.add("Morning peak active: LARGE trucks banned in city zones");
+end
+
+// VECERNJI SPIC: 17:00-20:00, radni dan
+rule "Context_EveningPeak"
+    salience 1000
+    when
+        $hour : Integer(this >= 17, this < 20)
+        $day  : Long(this >= 1, this <= 5)
+        not DispatchContext(context == OperationalContext.EVENING_PEAK)
+    then
+        DispatchContext ctx = new DispatchContext();
+        ctx.setContext(OperationalContext.EVENING_PEAK);
+        ctx.setCapacityFactor(1.0);
+        ctx.setFleetFactor(1.0);
+        ctx.setDelayThresholdMin(15);
+        insert(ctx);
+        messages.add("Evening peak active: delay escalation threshold 15min");
+end
+
+// NOCNI REZIM: 20:00-06:00
+rule "Context_NightMode"
+    salience 1000
+    when
+        $hour : Integer(this >= 20 || this < 6)
+        not DispatchContext(context == OperationalContext.NIGHT_MODE)
+    then
+        DispatchContext ctx = new DispatchContext();
+        ctx.setContext(OperationalContext.NIGHT_MODE);
+        ctx.setCapacityFactor(1.0);
+        ctx.setFleetFactor(1.0);
+        ctx.setDelayThresholdMin(30);
+        insert(ctx);
+        messages.add("Night mode active: only URGENT orders allowed");
+end
+
+// VIKEND: subota=6, nedelja=7
+rule "Context_Weekend"
+    salience 1000
+    when
+        $day : Long(this == 6 || this == 7)
+        not DispatchContext(context == OperationalContext.WEEKEND)
+    then
+        DispatchContext ctx = new DispatchContext();
+        ctx.setContext(OperationalContext.WEEKEND);
+        ctx.setCapacityFactor(1.0);
+        ctx.setFleetFactor(0.6);
+        ctx.setDelayThresholdMin(30);
+        insert(ctx);
+        messages.add("Weekend mode: 60% fleet available");
+end
+
+// ZIMSKI USLOVI: temperatura ispod 0
+rule "Context_WinterConditions"
+    salience 1000
+    when
+        $temp : Double(this < 0.0)
+        not DispatchContext(context == OperationalContext.WINTER_CONDITIONS)
+    then
+        DispatchContext ctx = new DispatchContext();
+        ctx.setContext(OperationalContext.WINTER_CONDITIONS);
+        ctx.setCapacityFactor(0.85);
+        ctx.setFleetFactor(1.0);
+        ctx.setDelayThresholdMin(30);
+        insert(ctx);
+        messages.add("Winter conditions: capacity reduced by 15%");
+end
