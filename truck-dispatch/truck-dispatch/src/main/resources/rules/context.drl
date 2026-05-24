@@ -5,10 +5,8 @@ import com.truckdispatch.truck_dispatch.model.OperationalContext;
 
 global java.util.List messages;
 
-// ============================================================
 // NIVO 0: Kontekstualizacija
-// salience 1000 — mora opaliti PRE svih validation/filtering pravila
-// ============================================================
+// salience 1000 â€” mora opaliti PRE svih validation/filtering pravila
 
 // JUTARNJI SPIC: 06:00-09:00, radni dan (pon=1 ... pet=5)
 rule "Context_MorningPeak"
