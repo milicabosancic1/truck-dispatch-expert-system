@@ -18,4 +18,5 @@ public class DeliveryOrder {
     private String assignedDriverId;
     private String routeId;
     private int delayMin;
+    private TruckType minTruckType;
 }

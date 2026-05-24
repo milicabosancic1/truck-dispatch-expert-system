@@ -14,12 +14,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Forward chaining pipeline — full coverage.
- *
- * Organized by rule level (Nivo 0..4) so failures pinpoint exactly
- * which layer broke.
- */
+
 @SpringBootTest
 @DisplayName("Forward Chaining — all pipeline levels")
 class ForwardChainingTest {
@@ -27,9 +22,7 @@ class ForwardChainingTest {
     @Autowired
     private DispatchService dispatchService;
 
-    // ================================================================
     // BUILDERS
-    // ================================================================
 
     private Truck truck(String id, TruckType type, double cap, TruckStatus status,
                         boolean frigo, boolean adr, double fuel, double dist) {
@@ -83,9 +76,7 @@ class ForwardChainingTest {
                 .filter(o -> o.getId().equals(id)).findFirst().orElseThrow();
     }
 
-    // ================================================================
     // NIVO 0 — Kontekst pravila
-    // ================================================================
 
     @Nested
     @DisplayName("Nivo 0 — Context rules")
@@ -144,9 +135,7 @@ class ForwardChainingTest {
         }
     }
 
-    // ================================================================
     // NIVO 1 — Validacija
-    // ================================================================
 
     @Nested
     @DisplayName("Nivo 1 — Validation rules")
@@ -262,6 +251,30 @@ class ForwardChainingTest {
         }
 
         @Test
+        @DisplayName("Second RASHLADNI order gets WAITING_RESOURCES when frigo truck is busy, not UNFEASIBLE")
+        void secondRashladniWaitsWhenFrigoBusy() {
+            // One frigo truck, two RASHLADNI orders — first gets assigned, second must WAIT not UNFEASIBLE
+            Truck frigo = truck("TF", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, true, false, 80, 5);
+            Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
+            Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
+            Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
+            DeliveryOrder o1 = order("O1", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.HIGH);
+            DeliveryOrder o2 = order("O2", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.NORMAL);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 10, 3, List.of(frigo), List.of(d1, d2), List.of(r), List.of(o1, o2)));
+
+            long assigned = res.getProcessedOrders().stream()
+                    .filter(o -> o.getStatus() == OrderStatus.ASSIGNED).count();
+            long waiting  = res.getProcessedOrders().stream()
+                    .filter(o -> o.getStatus() == OrderStatus.WAITING_RESOURCES).count();
+            long unfeasible = res.getProcessedOrders().stream()
+                    .filter(o -> o.getStatus() == OrderStatus.UNFEASIBLE).count();
+            assertThat(assigned).isEqualTo(1);
+            assertThat(waiting).isEqualTo(1);
+            assertThat(unfeasible).isEqualTo(0); // frigo truck EXISTS, just busy
+        }
+
+        @Test
         @DisplayName("RASHLADNI order UNFEASIBLE when no refrigerated truck available")
         void rashladniUnfeasibleNoFrigo() {
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
@@ -288,9 +301,7 @@ class ForwardChainingTest {
         }
     }
 
-    // ================================================================
     // NIVO 2 — Filtriranje kamiona
-    // ================================================================
 
     @Nested
     @DisplayName("Nivo 2 — Truck filtering")
@@ -348,6 +359,22 @@ class ForwardChainingTest {
         }
 
         @Test
+        @DisplayName("minTruckType: SMALL truck excluded when order requires MEDIUM minimum")
+        void minTruckTypeExcludesSmall() {
+            Truck tSmall  = truck("TS", TruckType.SMALL,  2000, TruckStatus.AVAILABLE, false, false, 80, 3);
+            Truck tMedium = truck("TM", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
+            Driver d = driver("D1", true, 1, "CE", false, 1, 5);
+            Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
+            DeliveryOrder o = order("O1", "R1", 500, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+            o.setMinTruckType(TruckType.MEDIUM);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 10, 3, List.of(tSmall, tMedium), List.of(d), List.of(r), List.of(o)));
+
+            assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TM");
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("TS") && m.contains("minTruckType"));
+        }
+
+        @Test
         @DisplayName("MEDIUM truck excluded from CITY road type")
         void mediumTruckNotAllowedOnCityRoute() {
             // Only SMALL is allowed on CITY; MEDIUM is not → order WAITING_RESOURCES if only MEDIUM available
@@ -362,9 +389,7 @@ class ForwardChainingTest {
         }
     }
 
-    // ================================================================
     // NIVO 3 — Provjera vozača
-    // ================================================================
 
     @Nested
     @DisplayName("Nivo 3 — Driver check")
@@ -443,6 +468,21 @@ class ForwardChainingTest {
         }
 
         @Test
+        @DisplayName("Night mode: driver with fatigue=6 excluded (night max is 5)")
+        void nightModeFatigueConstraint() {
+            Truck  t      = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
+            Driver dTired = driver("DT", true, 1, "CE", false, 6, 5); // fatigue=6 -- allowed normally, blocked at night
+            Driver dFresh = driver("DF", true, 1, "CE", false, 4, 5); // fatigue=4 -- passes night constraint
+            Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(10, 22, 3, List.of(t), List.of(dTired, dFresh), List.of(r),
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.URGENT))));
+
+            assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
+            assertThat(find(res, "O1").getAssignedDriverId()).isEqualTo("DF");
+        }
+
+        @Test
         @DisplayName("Order gets WAITING_RESOURCES when no driver qualifies")
         void noValidPairWhenNoDriverQualifies() {
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
@@ -458,9 +498,7 @@ class ForwardChainingTest {
         }
     }
 
-    // ================================================================
     // NIVO 3+ — Scoring
-    // ================================================================
 
     @Nested
     @DisplayName("Nivo 3+ — Scoring rules")
@@ -548,9 +586,7 @@ class ForwardChainingTest {
         }
     }
 
-    // ================================================================
-    // NIVO 4 — Finalna dodjela
-    // ================================================================
+    // NIVO 4 — Finalna dodela
 
     @Nested
     @DisplayName("Nivo 4 — Final assignment")

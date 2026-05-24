@@ -185,6 +185,49 @@ try {
 }
 
 # ============================================================
+# SCENARIO 4: minTruckType + nocni rezim — fatigue constraint
+# Ocekivano: SMALL kamion iskljucen (nalog zahteva min MEDIUM),
+#            vozac sa fatigueLevel=6 iskljucen u nocnom rezimu
+# ============================================================
+Write-Section "SCENARIO 4 — minTruckType filtriranje + nocni fatigue (22:00, 8°C)"
+
+$s4 = @{
+    temperature = 8
+    hour        = 22
+    dayOfWeek   = 3
+    orders = @(
+        @{ id="K-10"; destination="Beograd"; weightKg=500; cargoType="STANDARDNO";
+           deliveryDeadlineMin=50; priority="URGENT"; status="NEW"; routeId="R-07";
+           minTruckType="MEDIUM" }
+    )
+    trucks = @(
+        @{ id="V-07"; type="SMALL";  maxCapacityKg=2000; status="AVAILABLE";
+           location="Novi Sad"; fuelPercent=90; hasRefrigerationUnit=$false;
+           hasAdrEquipment=$false; distanceToOriginKm=3; daysSinceRefrigerationService=0 },
+        @{ id="V-08"; type="MEDIUM"; maxCapacityKg=5000; status="AVAILABLE";
+           location="Novi Sad"; fuelPercent=90; hasRefrigerationUnit=$false;
+           hasAdrEquipment=$false; distanceToOriginKm=8; daysSinceRefrigerationService=0 }
+    )
+    drivers = @(
+        @{ id="D-07"; available=$true; workingHoursToday=2; license="CE";
+           hasAdrLicense=$false; fatigueLevel=6; yearsOfExperience=5; recentRouteIds=@() },
+        @{ id="D-08"; available=$true; workingHoursToday=2; license="CE";
+           hasAdrLicense=$false; fatigueLevel=3; yearsOfExperience=5; recentRouteIds=@() }
+    )
+    routes = @(
+        @{ id="R-07"; roadType="HIGHWAY"; distanceKm=100; estimatedTimeHours=1.0;
+           maxCapacityKg=15000; maxSpeedKmh=130; hasTunnel=$false }
+    )
+} | ConvertTo-Json -Depth 5
+
+try {
+    $r = Invoke-RestMethod -Uri "$BaseUrl/process" -Method Post -Headers $headers -Body $s4
+    Write-Result $r
+} catch {
+    Write-Host "  GRESKA: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+# ============================================================
 # CEP EVENTI
 # ============================================================
 Write-Section "CEP EVENTI — simulacija dogadjaja u floti"

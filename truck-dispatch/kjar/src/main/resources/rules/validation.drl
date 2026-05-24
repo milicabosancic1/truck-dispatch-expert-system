@@ -73,10 +73,10 @@ rule "CargoType_Refrigerated_NoFrigoTruck"
     salience 870
     when
         $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.RASHLADNI)
-        not (exists Truck(status == TruckStatus.AVAILABLE, hasRefrigerationUnit == true))
+        not (exists Truck(hasRefrigerationUnit == true))
     then
         modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
-        messages.add("Order " + $order.getId() + " UNFEASIBLE — no refrigerated truck available!");
+        messages.add("Order " + $order.getId() + " UNFEASIBLE — no refrigerated truck in fleet!");
 end
 
 rule "CargoType_ADR_TunnelRoute"

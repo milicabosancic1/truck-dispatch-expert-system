@@ -14,7 +14,7 @@ global java.util.List messages;
 
 // ACCUMULATE PRAVILA
 
-// SUM: Ukupna teÅ¾ina dodeljenih naloga po vozaÄu danas > 20.000kg
+// SUM: Ukupna tezina dodeljenih naloga po vozacu danas > 20.000kg
 rule "Accumulate_OverloadedDriver"
     salience 30
     no-loop true
@@ -55,25 +55,25 @@ rule "Accumulate_OverloadedTruck"
         messages.add("ALERT: truck " + $truckId + " has " + $count + " active orders!");
 end
 
-// AVERAGE: ProseÄno kaÅ¡njenje po kamionu > 30min
-rule "Accumulate_AvgDelayByTruck"
+// AVERAGE: Prosecno kasnjenje po ruti > 30min (grupisano po routeId)
+rule "Accumulate_AvgDelayByRoute"
     salience 30
     no-loop true
     when
-        DeliveryOrder(status == OrderStatus.IN_PROGRESS, delayMin > 0, $truckId : assignedTruckId)
+        DeliveryOrder(status == OrderStatus.IN_PROGRESS, delayMin > 0, $routeId : routeId)
         $avgDelay : Number(doubleValue > 30) from accumulate(
             DeliveryOrder(status == OrderStatus.IN_PROGRESS,
-                          assignedTruckId == $truckId, $d : delayMin),
+                          routeId == $routeId, $d : delayMin),
             average($d)
         )
-        not Alarm(type == AlarmType.PROBLEMATIC_ROUTE, entityId == $truckId)
+        not Alarm(type == AlarmType.PROBLEMATIC_ROUTE, entityId == $routeId)
     then
-        insert(new Alarm(AlarmType.PROBLEMATIC_ROUTE, $truckId,
-                "Truck " + $truckId + " avg delay " + $avgDelay + "min", 0));
-        messages.add("ALERT: truck " + $truckId + " average delay=" + $avgDelay + "min!");
+        insert(new Alarm(AlarmType.PROBLEMATIC_ROUTE, $routeId,
+                "Route " + $routeId + " avg delay " + $avgDelay + "min", 0));
+        messages.add("ALERT: route " + $routeId + " average delay=" + $avgDelay + "min!");
 end
 
-// SUM/COUNT: ProseÄni radni sati tima > 7.5h
+// SUM/COUNT: Prosecni radni sati tima > 7.5h
 rule "Accumulate_TeamHoursWarning"
     salience 30
     no-loop true
@@ -86,10 +86,10 @@ rule "Accumulate_TeamHoursWarning"
     then
         insert(new Alarm(AlarmType.SHIFT_WARNING, "TEAM",
                 "Team avg working hours: " + $avgHours, 0));
-        messages.add("WARNING: team average working hours=" + $avgHours + "h â€” consider shift change!");
+        messages.add("WARNING: team average working hours=" + $avgHours + "h -- consider shift change!");
 end
 
-// COLLECT LIST: PreviÅ¡e slobodnih kamiona (> 5)
+// COLLECT LIST: Previse slobodnih kamiona (> 5)
 rule "Accumulate_IdleFleet"
     salience 30
     no-loop true
@@ -102,5 +102,5 @@ rule "Accumulate_IdleFleet"
     then
         insert(new Alarm(AlarmType.IDLE_FLEET, "FLEET",
                 "Too many idle trucks: " + $idleList, $idleList.size()));
-        messages.add("ALERT: " + $idleList.size() + " idle trucks â€” " + $idleList);
+        messages.add("ALERT: " + $idleList.size() + " idle trucks -- " + $idleList);
 end

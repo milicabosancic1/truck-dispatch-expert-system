@@ -79,3 +79,15 @@ rule "ExcludeNoAdrEquipmentForDangerous"
         retract($candidate);
         messages.add("Truck " + $candidate.getTruck().getId() + " excluded - no ADR equipment");
 end
+
+// Iskljuci kamione ispod minimalnog tipa koji nalog zahteva
+rule "ExcludeTruckBelowMinType"
+    salience 790
+    when
+        $candidate : CandidateTruck($order : order, $truck : truck)
+        DeliveryOrder(this == $order, minTruckType != null, $min : minTruckType)
+        Truck(this == $truck, type.isAtLeast($min) == false)
+    then
+        retract($candidate);
+        messages.add("Truck " + $truck.getId() + " excluded - below minTruckType " + $min);
+end

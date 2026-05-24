@@ -10,4 +10,8 @@ public enum TruckType {
             case LARGE -> roadType == RoadType.REGIONAL || roadType == RoadType.HIGHWAY;
         };
     }
+
+    public boolean isAtLeast(TruckType min) {
+        return this.ordinal() >= min.ordinal();
+    }
 }
