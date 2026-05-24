@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <kmodule xmlns="http://www.drools.org/xsd/kmodule">
-    <kbase name="TruckDispatchRules" packages="rules">
+    <!-- Main rule engine session (cloud mode — no temporal operators) -->
+    <kbase name="TruckDispatchRules" packages="rules" eventProcessingMode="cloud">
         <ksession name="TruckDispatchSession" type="stateful"/>
+    </kbase>
+
+    <!-- CEP session (stream mode — enables temporal operators and event windows) -->
+    <kbase name="TruckDispatchCEP" packages="rules.cep" eventProcessingMode="stream">
+        <ksession name="TruckDispatchCEPSession" type="stateful" clockType="realtime"/>
     </kbase>
 </kmodule>
