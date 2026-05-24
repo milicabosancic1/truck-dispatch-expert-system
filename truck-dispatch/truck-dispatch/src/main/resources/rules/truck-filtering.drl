@@ -1,0 +1,83 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Route;
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
+import com.truckdispatch.truck_dispatch.model.CandidateTruck;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
+import com.truckdispatch.truck_dispatch.model.TruckType;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
+import com.truckdispatch.truck_dispatch.model.CargoType;
+import com.truckdispatch.truck_dispatch.model.RoadType;
+
+global java.util.List messages;
+
+// ============================================================
+// NIVO 2: Filtriranje kamiona
+// ============================================================
+
+rule "CreateCandidateTruck_Normal"
+    salience 800
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID)
+        $route : Route(id == $order.routeId)
+        not DispatchContext(context == OperationalContext.WINTER_CONDITIONS)
+        $truck : Truck(
+            status == TruckStatus.AVAILABLE,
+            maxCapacityKg >= $order.weightKg,
+            type.isAllowedOnRoadType($route.roadType) == true
+        )
+    then
+        insert(new CandidateTruck($order, $truck));
+end
+
+rule "CreateCandidateTruck_Winter"
+    salience 800
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID)
+        $route : Route(id == $order.routeId)
+        $ctx : DispatchContext(context == OperationalContext.WINTER_CONDITIONS, $factor : capacityFactor)
+        $truck : Truck(
+            status == TruckStatus.AVAILABLE,
+            maxCapacityKg * $factor >= $order.weightKg,
+            type.isAllowedOnRoadType($route.roadType) == true
+        )
+    then
+        insert(new CandidateTruck($order, $truck));
+end
+
+rule "ExcludeLargeTruck_MorningPeak_City"
+    salience 790
+    when
+        DispatchContext(context == OperationalContext.MORNING_PEAK)
+        $route : Route(roadType == RoadType.CITY)
+        $candidate : CandidateTruck(truck.type == TruckType.LARGE, order.routeId == $route.id)
+    then
+        retract($candidate);
+        messages.add("Truck " + $candidate.getTruck().getId() + " excluded — LARGE/city/morning peak");
+end
+
+rule "ExcludeNoFrigoForRefrigerated"
+    salience 790
+    when
+        $candidate : CandidateTruck(
+            order.cargoType == CargoType.RASHLADNI,
+            truck.hasRefrigerationUnit == false
+        )
+    then
+        retract($candidate);
+end
+
+rule "ExcludeNoAdrEquipmentForDangerous"
+    salience 790
+    when
+        $candidate : CandidateTruck(
+            order.cargoType == CargoType.OPASNA_ROBA,
+            truck.hasAdrEquipment == false
+        )
+    then
+        retract($candidate);
+        messages.add("Truck " + $candidate.getTruck().getId() + " excluded — no ADR equipment");
+end
