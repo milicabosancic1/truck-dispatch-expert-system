@@ -243,7 +243,10 @@ package "Application Layer" #FFE0E0 {
     class CepService {
         -cepSession: KieSession
         -messages: List<String>
+        -truckHandles: Map<String, FactHandle>
+        -orderHandles: Map<String, FactHandle>
         --
+        +syncFleetState(List<Truck>, List<DeliveryOrder>): void
         +processEvent(FleetEvent): List<String>
         +getActiveAlarms(): List<Alarm>
         +shutdown(): void
