@@ -1,0 +1,95 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.DelayPropagation;
+import com.truckdispatch.truck_dispatch.model.Alarm;
+import com.truckdispatch.truck_dispatch.model.AlarmType;
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.OrderPriority;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
+
+global java.util.List messages;
+
+// NIVO 5: Domino efekat kaÅ¡njenja
+
+// Detekcija primarnog kaÅ¡njenja â€” kamion kasni i blokira sledeÄ‡i nalog
+rule "Domino_DetectPrimary"
+    salience 30
+    when
+        $n1 : DeliveryOrder(status == OrderStatus.IN_PROGRESS, delayMin > 0,
+                            $truckId : assignedTruckId)
+        $n2 : DeliveryOrder(status == OrderStatus.WAITING_UNLOADING,
+                            assignedTruckId == $truckId, this != $n1)
+        not DelayPropagation(primary == $n1, affected == $n2)
+    then
+        insert(new DelayPropagation($n1, $n2, $n1.getDelayMin()));
+        messages.add("DOMINO: delay on order " + $n1.getId() + " affects order " + $n2.getId()
+                + " (+" + $n1.getDelayMin() + "min)");
+end
+
+// Propagacija kaÅ¡njenja kroz lanac
+rule "Domino_PropagateChain"
+    salience 30
+    when
+        $dp : DelayPropagation($n2 : affected, $delay : delayMin)
+        $n3 : DeliveryOrder(status == OrderStatus.WAITING_UNLOADING,
+                            assignedTruckId == $n2.assignedTruckId, this != $n2)
+        not DelayPropagation(affected == $n3)
+    then
+        insert(new DelayPropagation($n2, $n3, $delay));
+        messages.add("DOMINO chain: order " + $n3.getId() + " affected (+" + $delay + "min)");
+end
+
+// Replaniranje hitnog naloga zahvacenog domino efektom â€” visok prioritet
+rule "Domino_ReplannUrgentOrder"
+    salience 200
+    no-loop true
+    when
+        $dp         : DelayPropagation($affected : affected)
+        $affOrder   : DeliveryOrder(this == $affected,
+                          priority == OrderPriority.URGENT || priority == OrderPriority.CRITICAL_DELIVERY,
+                          $weight : weightKg, $oldTruckId : assignedTruckId)
+        $freeTruck  : Truck(status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight,
+                            id != $oldTruckId)
+    then
+        modify($freeTruck) { setStatus(TruckStatus.BUSY); }
+        modify($affOrder)  { setStatus(OrderStatus.REPLANNED), setAssignedTruckId($freeTruck.getId()); }
+        messages.add("URGENT order " + $affOrder.getId() + " replanned -> " + $freeTruck.getId());
+end
+
+// Eskalacija: kamion izazvao domino na 3+ naloga
+rule "Domino_Escalation"
+    salience 30
+    no-loop true
+    when
+        $dp       : DelayPropagation($truckId : primary.assignedTruckId)
+        $count    : Long(this >= 3) from accumulate(
+                        DelayPropagation(primary.assignedTruckId == $truckId),
+                        count(1)
+                    )
+        not Alarm(type == AlarmType.DOMINO_ESCALATION, entityId == $truckId)
+    then
+        insert(new Alarm(AlarmType.DOMINO_ESCALATION, $truckId,
+                "Domino escalation: truck " + $truckId + " caused " + $count + " cascading delays",
+                $count.intValue()));
+        messages.add("ESCALATION TO MANAGER: truck " + $truckId + " caused domino on " + $count + " orders!");
+end
+
+// NoÄ‡ni reÅ¾im: odloÅ¾i zahvaÄ‡eni nalog ako nije hitan
+rule "Domino_NightMode_Postpone"
+    salience 30
+    when
+        DispatchContext(context == OperationalContext.NIGHT_MODE)
+        $dp : DelayPropagation($affected : affected)
+        DeliveryOrder(this == $affected,
+                      priority != OrderPriority.URGENT,
+                      priority != OrderPriority.CRITICAL_DELIVERY,
+                      $weight : weightKg)
+        not (exists Truck(status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight))
+    then
+        modify($affected) { setStatus(OrderStatus.POSTPONED_UNTIL_MORNING); }
+        messages.add("Night mode: order " + $affected.getId() + " postponed until 06:00");
+end
