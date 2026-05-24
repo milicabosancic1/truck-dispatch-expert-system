@@ -1,0 +1,319 @@
+@startuml TruckDispatch_ClassDiagram
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageFontSize 14
+skinparam linetype ortho
+hide empty members
+
+' ============================================================
+' ENUMS
+' ============================================================
+
+enum TruckType {
+    SMALL
+    MEDIUM
+    LARGE
+    --
+    +isAllowedOnRoadType(RoadType): boolean
+}
+
+enum TruckStatus {
+    AVAILABLE
+    BUSY
+    BREAKDOWN
+    SERVICE
+}
+
+enum CargoType {
+    STANDARDNO
+    RASHLADNI
+    OPASNA_ROBA
+    LOMLJIVO
+}
+
+enum OrderStatus {
+    NEW
+    VALID
+    UNFEASIBLE
+    ASSIGNED
+    IN_PROGRESS
+    WAITING_RESOURCES
+    WAITING_UNLOADING
+    REPLANNED
+    POSTPONED_UNTIL_MORNING
+    COMPLETED
+}
+
+enum OrderPriority {
+    NORMAL
+    HIGH
+    URGENT
+    CRITICAL_DELIVERY
+}
+
+enum RoadType {
+    CITY
+    LOCAL
+    REGIONAL
+    HIGHWAY
+}
+
+enum OperationalContext {
+    MORNING_PEAK
+    DAILY_NORMAL
+    EVENING_PEAK
+    NIGHT_MODE
+    WEEKEND
+    WINTER_CONDITIONS
+}
+
+enum FleetEventType {
+    DELAY
+    POSITION
+    BREAKDOWN
+    FUEL_LEVEL
+    NEW_ORDER
+}
+
+enum AlarmType {
+    ESCALATION
+    VEHICLE_STOPPED
+    EMERGENCY_REPLACEMENT
+    FUEL_LEAK
+    DOMINO_ESCALATION
+    OVERLOADED_DRIVER
+    OVERLOADED_TRUCK
+    PROBLEMATIC_ROUTE
+    SHIFT_WARNING
+    IDLE_FLEET
+}
+
+' ============================================================
+' DOMAIN MODEL
+' ============================================================
+
+package "Domain Model" #DDEEFF {
+
+    class DeliveryOrder {
+        +id: String
+        +destination: String
+        +weightKg: double
+        +deliveryDeadlineMin: int
+        +delayMin: int
+        +routeId: String
+        +assignedTruckId: String
+        +assignedDriverId: String
+        +cargoType: CargoType
+        +priority: OrderPriority
+        +status: OrderStatus
+    }
+
+    class Truck {
+        +id: String
+        +location: String
+        +maxCapacityKg: double
+        +fuelPercent: double
+        +distanceToOriginKm: double
+        +daysSinceRefrigerationService: int
+        +hasRefrigerationUnit: boolean
+        +hasAdrEquipment: boolean
+        +type: TruckType
+        +status: TruckStatus
+    }
+
+    class Driver {
+        +id: String
+        +license: String
+        +workingHoursToday: double
+        +fatigueLevel: int
+        +yearsOfExperience: int
+        +available: boolean
+        +hasAdrLicense: boolean
+        +recentRouteIds: List<String>
+        --
+        +isLicensedFor(TruckType): boolean
+    }
+
+    class Route {
+        +id: String
+        +distanceKm: double
+        +estimatedTimeHours: double
+        +maxCapacityKg: double
+        +maxSpeedKmh: double
+        +hasTunnel: boolean
+        +roadType: RoadType
+    }
+
+    class DispatchContext {
+        +capacityFactor: double
+        +fleetFactor: double
+        +delayThresholdMin: int
+        +context: OperationalContext
+    }
+}
+
+' ============================================================
+' DROOLS WORKING MEMORY FACTS
+' ============================================================
+
+package "Drools Facts" #EEFFDD {
+
+    class CandidateTruck {
+        +order: DeliveryOrder
+        +truck: Truck
+    }
+
+    class ValidPair {
+        +order: DeliveryOrder
+        +truck: Truck
+        +driver: Driver
+        +score: int
+    }
+
+    class DelayPropagation {
+        +primary: DeliveryOrder
+        +affected: DeliveryOrder
+        +delayMin: int
+    }
+
+    class RejectionReason {
+        +cause: String
+        +effect: String
+    }
+
+    class OrderGroupMembership {
+        +item: String
+        +group: String
+    }
+
+    class Alarm {
+        +entityId: String
+        +message: String
+        +affectedCount: int
+        +type: AlarmType
+    }
+
+    class FleetEvent <<Event>> {
+        +entityId: String
+        +value: double
+        +location: String
+        +timestamp: long
+        +type: FleetEventType
+    }
+}
+
+' ============================================================
+' DTO
+' ============================================================
+
+package "DTO" #FFEECC {
+
+    class DispatchRequest {
+        +temperature: double
+        +hour: Integer
+        +dayOfWeek: Integer
+        +orders: List<DeliveryOrder>
+        +trucks: List<Truck>
+        +drivers: List<Driver>
+        +routes: List<Route>
+    }
+
+    class DispatchResult {
+        +messages: List<String>
+        +processedOrders: List<DeliveryOrder>
+        +alarms: List<Alarm>
+    }
+}
+
+' ============================================================
+' SERVICE & CONTROLLER
+' ============================================================
+
+package "Application Layer" #FFE0E0 {
+
+    class DispatchService {
+        -kieContainer: KieContainer
+        --
+        +processDispatch(DispatchRequest): DispatchResult
+        -insertRejectionReasons(KieSession): void
+        -insertOrderGroupMemberships(KieSession): void
+        -buildResult(KieSession, List): DispatchResult
+    }
+
+    class CepService {
+        -cepSession: KieSession
+        -messages: List<String>
+        --
+        +processEvent(FleetEvent): List<String>
+        +getActiveAlarms(): List<Alarm>
+        +shutdown(): void
+    }
+
+    class DispatchController {
+        -dispatchService: DispatchService
+        -cepService: CepService
+        --
+        +process(DispatchRequest): ResponseEntity
+        +processEvent(FleetEvent): ResponseEntity
+        +getAlarms(): ResponseEntity
+    }
+}
+
+' ============================================================
+' RELATIONSHIPS — Domain
+' ============================================================
+
+DeliveryOrder --> CargoType
+DeliveryOrder --> OrderStatus
+DeliveryOrder --> OrderPriority
+
+Truck --> TruckType
+Truck --> TruckStatus
+
+Route --> RoadType
+
+DispatchContext --> OperationalContext
+
+' ============================================================
+' RELATIONSHIPS — Drools Facts
+' ============================================================
+
+CandidateTruck "1" --> "1" DeliveryOrder
+CandidateTruck "1" --> "1" Truck
+
+ValidPair "1" --> "1" DeliveryOrder
+ValidPair "1" --> "1" Truck
+ValidPair "1" --> "1" Driver
+
+DelayPropagation "1" --> "1" DeliveryOrder : primary
+DelayPropagation "1" --> "1" DeliveryOrder : affected
+
+Alarm --> AlarmType
+FleetEvent --> FleetEventType
+
+' ============================================================
+' RELATIONSHIPS — DTO
+' ============================================================
+
+DispatchRequest "1" o-- "many" DeliveryOrder
+DispatchRequest "1" o-- "many" Truck
+DispatchRequest "1" o-- "many" Driver
+DispatchRequest "1" o-- "many" Route
+
+DispatchResult "1" o-- "many" DeliveryOrder
+DispatchResult "1" o-- "many" Alarm
+
+' ============================================================
+' RELATIONSHIPS — Application
+' ============================================================
+
+DispatchController --> DispatchService
+DispatchController --> CepService
+
+DispatchService ..> DispatchRequest : uses
+DispatchService ..> DispatchResult : produces
+
+CepService ..> FleetEvent : processes
+CepService ..> Alarm : monitors
+
+@enduml
