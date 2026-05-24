@@ -14,15 +14,21 @@ import com.truckdispatch.truck_dispatch.model.OperationalContext;
 global java.util.List messages;
 
 // NIVO 4: Finalna dodela
+// Biramo ValidPair sa najvišim score-om gdje su i kamion i vozač još SLOBODNI.
+// not(...and...and...) sprečava dvostruku dodjelu kada više naloga dijeli isti resurs.
 
 rule "FinalAssignment_Urgent"
     salience 100
     no-loop true
     when
-        $order : DeliveryOrder(status == OrderStatus.VALID,
-                               priority == OrderPriority.URGENT || priority == OrderPriority.CRITICAL_DELIVERY)
-        $pair   : ValidPair(order == $order, $score : score, $truck : truck, $driver : driver)
-        not ValidPair(order == $order, score > $score)
+        $order  : DeliveryOrder(status == OrderStatus.VALID,
+                                priority == OrderPriority.URGENT || priority == OrderPriority.CRITICAL_DELIVERY)
+        $pair   : ValidPair(order == $order, $score : score)
+        $truck  : Truck(this == $pair.truck,   status == TruckStatus.AVAILABLE)
+        $driver : Driver(this == $pair.driver, available == true)
+        not (ValidPair(order == $order, score > $score, $bt : truck, $bd : driver)
+             and Truck(this == $bt,   status == TruckStatus.AVAILABLE)
+             and Driver(this == $bd,  available == true))
     then
         modify($truck)  { setStatus(TruckStatus.BUSY); }
         modify($driver) { setAvailable(false); }
@@ -39,11 +45,15 @@ rule "FinalAssignment_Normal"
     salience 50
     no-loop true
     when
-        $order : DeliveryOrder(status == OrderStatus.VALID,
-                               priority != OrderPriority.URGENT,
-                               priority != OrderPriority.CRITICAL_DELIVERY)
-        $pair   : ValidPair(order == $order, $score : score, $truck : truck, $driver : driver)
-        not ValidPair(order == $order, score > $score)
+        $order  : DeliveryOrder(status == OrderStatus.VALID,
+                                priority != OrderPriority.URGENT,
+                                priority != OrderPriority.CRITICAL_DELIVERY)
+        $pair   : ValidPair(order == $order, $score : score)
+        $truck  : Truck(this == $pair.truck,   status == TruckStatus.AVAILABLE)
+        $driver : Driver(this == $pair.driver, available == true)
+        not (ValidPair(order == $order, score > $score, $bt : truck, $bd : driver)
+             and Truck(this == $bt,   status == TruckStatus.AVAILABLE)
+             and Driver(this == $bd,  available == true))
     then
         modify($truck)  { setStatus(TruckStatus.BUSY); }
         modify($driver) { setAvailable(false); }
@@ -74,5 +84,5 @@ rule "PostValidation_LowFuel"
         $order : DeliveryOrder(status == OrderStatus.ASSIGNED, $truckId : assignedTruckId)
         $truck : Truck(id == $truckId, fuelPercent < 20)
     then
-        messages.add("WARNING: truck " + $truck.getId() + " has < 20% fuel â€” refuel before departure!");
+        messages.add("WARNING: truck " + $truck.getId() + " has < 20% fuel — refuel before departure!");
 end

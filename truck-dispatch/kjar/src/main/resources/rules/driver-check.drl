@@ -7,6 +7,7 @@ import com.truckdispatch.truck_dispatch.model.CandidateTruck;
 import com.truckdispatch.truck_dispatch.model.ValidPair;
 import com.truckdispatch.truck_dispatch.model.OrderStatus;
 import com.truckdispatch.truck_dispatch.model.CargoType;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
 
 global java.util.List messages;
 
@@ -55,13 +56,15 @@ rule "ExcludeDriver_NoADR"
         messages.add("Driver " + $driver.getId() + " excluded — no ADR license for order " + $order.getId());
 end
 
-// Nema validnog para — kamion postoji ali nema odgovarajuceg vozaca
+// Nema dostupnog para — ili nikad nije kreiran, ili su svi resursi zauzeti
 rule "NoValidPairFound"
     salience 10
     when
         $order : DeliveryOrder(status == OrderStatus.VALID)
-        not (exists ValidPair(order == $order))
+        not (ValidPair(order == $order, $bt : truck, $bd : driver)
+             and Truck(this == $bt,  status == TruckStatus.AVAILABLE)
+             and Driver(this == $bd, available == true))
     then
         modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
-        messages.add("Order " + $order.getId() + " waiting for resources — no valid truck+driver combination. Run BC diagnostics.");
+        messages.add("Order " + $order.getId() + " waiting for resources — no available truck+driver combination. Run BC diagnostics.");
 end
