@@ -1,0 +1,103 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Route;
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.OrderPriority;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
+import com.truckdispatch.truck_dispatch.model.CargoType;
+
+global java.util.List messages;
+
+// ============================================================
+// NIVO 1: Validacija naloga
+// ============================================================
+
+rule "Validation_Feasible_Normal"
+    salience 900
+    when
+        $order : DeliveryOrder(status == OrderStatus.NEW)
+        not DispatchContext(context == OperationalContext.WINTER_CONDITIONS)
+        exists Truck(status == TruckStatus.AVAILABLE, maxCapacityKg >= $order.weightKg)
+    then
+        modify($order) { setStatus(OrderStatus.VALID); }
+        messages.add("Order " + $order.getId() + " is VALID (weight=" + $order.getWeightKg() + "kg)");
+end
+
+rule "Validation_Feasible_Winter"
+    salience 900
+    when
+        $order : DeliveryOrder(status == OrderStatus.NEW)
+        $ctx : DispatchContext(context == OperationalContext.WINTER_CONDITIONS, $factor : capacityFactor)
+        exists Truck(status == TruckStatus.AVAILABLE, maxCapacityKg * $factor >= $order.weightKg)
+    then
+        modify($order) { setStatus(OrderStatus.VALID); }
+        messages.add("Order " + $order.getId() + " is VALID (winter factor=" + $factor + ")");
+end
+
+rule "Validation_Infeasible_Normal"
+    salience 900
+    when
+        $order : DeliveryOrder(status == OrderStatus.NEW)
+        not DispatchContext(context == OperationalContext.WINTER_CONDITIONS)
+        not (exists Truck(status == TruckStatus.AVAILABLE, maxCapacityKg >= $order.weightKg))
+    then
+        modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
+        messages.add("Order " + $order.getId() + " is UNFEASIBLE — no truck with enough capacity. Consider subcontractor.");
+end
+
+rule "Validation_Infeasible_Winter"
+    salience 900
+    when
+        $order : DeliveryOrder(status == OrderStatus.NEW)
+        $ctx : DispatchContext(context == OperationalContext.WINTER_CONDITIONS, $factor : capacityFactor)
+        not (exists Truck(status == TruckStatus.AVAILABLE, maxCapacityKg * $factor >= $order.weightKg))
+    then
+        modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
+        messages.add("Order " + $order.getId() + " is UNFEASIBLE — winter conditions reduce effective capacity below " + $order.getWeightKg() + "kg");
+end
+
+rule "Validation_UrgentOrder"
+    salience 880
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, deliveryDeadlineMin < 120)
+    then
+        modify($order) { setPriority(OrderPriority.URGENT); }
+        messages.add("Order " + $order.getId() + " marked URGENT (deadline=" + $order.getDeliveryDeadlineMin() + "min)");
+end
+
+// ============================================================
+// NIVO 1: Validacija tipa tereta
+// ============================================================
+
+rule "CargoType_Refrigerated_NoFrigoTruck"
+    salience 870
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.RASHLADNI)
+        not (exists Truck(status == TruckStatus.AVAILABLE, hasRefrigerationUnit == true))
+    then
+        modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
+        messages.add("Order " + $order.getId() + " UNFEASIBLE — no refrigerated truck available!");
+end
+
+rule "CargoType_ADR_TunnelRoute"
+    salience 870
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.OPASNA_ROBA)
+        $route : Route(id == $order.routeId, hasTunnel == true)
+    then
+        messages.add("ADR order " + $order.getId() + " WARNING: route " + $route.getId() + " has tunnel — dispatcher must select alternative route!");
+end
+
+rule "CargoType_NightMode_OnlyUrgent"
+    salience 870
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, priority != OrderPriority.URGENT, priority != OrderPriority.CRITICAL_DELIVERY)
+        DispatchContext(context == OperationalContext.NIGHT_MODE)
+    then
+        modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
+        messages.add("Night mode: order " + $order.getId() + " postponed — only URGENT orders allowed at night");
+end
