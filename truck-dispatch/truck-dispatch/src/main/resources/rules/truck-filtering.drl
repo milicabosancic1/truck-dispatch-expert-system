@@ -14,9 +14,7 @@ import com.truckdispatch.truck_dispatch.model.RoadType;
 
 global java.util.List messages;
 
-// ============================================================
 // NIVO 2: Filtriranje kamiona
-// ============================================================
 
 rule "CreateCandidateTruck_Normal"
     salience 800
@@ -56,7 +54,7 @@ rule "ExcludeLargeTruck_MorningPeak_City"
         $candidate : CandidateTruck(truck.type == TruckType.LARGE, order.routeId == $route.id)
     then
         retract($candidate);
-        messages.add("Truck " + $candidate.getTruck().getId() + " excluded — LARGE/city/morning peak");
+        messages.add("Truck " + $candidate.getTruck().getId() + " excluded â€” LARGE/city/morning peak");
 end
 
 rule "ExcludeNoFrigoForRefrigerated"
@@ -79,5 +77,5 @@ rule "ExcludeNoAdrEquipmentForDangerous"
         )
     then
         retract($candidate);
-        messages.add("Truck " + $candidate.getTruck().getId() + " excluded — no ADR equipment");
+        messages.add("Truck " + $candidate.getTruck().getId() + " excluded â€” no ADR equipment");
 end
