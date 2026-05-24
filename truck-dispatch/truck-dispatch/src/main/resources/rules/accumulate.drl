@@ -1,0 +1,106 @@
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Driver;
+import com.truckdispatch.truck_dispatch.model.DelayPropagation;
+import com.truckdispatch.truck_dispatch.model.Alarm;
+import com.truckdispatch.truck_dispatch.model.AlarmType;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
+import java.util.List;
+
+global java.util.List messages;
+
+// ACCUMULATE PRAVILA
+
+// SUM: Ukupna teÅ¾ina dodeljenih naloga po vozaÄu danas > 20.000kg
+rule "Accumulate_OverloadedDriver"
+    salience 30
+    no-loop true
+    when
+        $driver : Driver($driverId : id)
+        not Alarm(type == AlarmType.OVERLOADED_DRIVER, entityId == $driverId)
+        $total : Number(doubleValue > 20000) from accumulate(
+            DeliveryOrder(
+                status == OrderStatus.ASSIGNED || status == OrderStatus.IN_PROGRESS,
+                assignedDriverId == $driverId,
+                $w : weightKg
+            ),
+            sum($w)
+        )
+    then
+        insert(new Alarm(AlarmType.OVERLOADED_DRIVER, $driverId,
+                "Driver " + $driverId + " overloaded: " + $total + "kg today", 0));
+        messages.add("ALERT: driver " + $driverId + " carrying " + $total + "kg today (>20.000kg)");
+end
+
+// COUNT: Broj aktivnih naloga po kamionu > 3
+rule "Accumulate_OverloadedTruck"
+    salience 30
+    no-loop true
+    when
+        $truck : Truck($truckId : id)
+        not Alarm(type == AlarmType.OVERLOADED_TRUCK, entityId == $truckId)
+        $count : Number(intValue > 3) from accumulate(
+            DeliveryOrder(
+                status == OrderStatus.ASSIGNED || status == OrderStatus.IN_PROGRESS,
+                assignedTruckId == $truckId
+            ),
+            count(1)
+        )
+    then
+        insert(new Alarm(AlarmType.OVERLOADED_TRUCK, $truckId,
+                "Truck " + $truckId + " has " + $count + " active orders", 0));
+        messages.add("ALERT: truck " + $truckId + " has " + $count + " active orders!");
+end
+
+// AVERAGE: ProseÄno kaÅ¡njenje po kamionu > 30min
+rule "Accumulate_AvgDelayByTruck"
+    salience 30
+    no-loop true
+    when
+        DeliveryOrder(status == OrderStatus.IN_PROGRESS, delayMin > 0, $truckId : assignedTruckId)
+        $avgDelay : Number(doubleValue > 30) from accumulate(
+            DeliveryOrder(status == OrderStatus.IN_PROGRESS,
+                          assignedTruckId == $truckId, $d : delayMin),
+            average($d)
+        )
+        not Alarm(type == AlarmType.PROBLEMATIC_ROUTE, entityId == $truckId)
+    then
+        insert(new Alarm(AlarmType.PROBLEMATIC_ROUTE, $truckId,
+                "Truck " + $truckId + " avg delay " + $avgDelay + "min", 0));
+        messages.add("ALERT: truck " + $truckId + " average delay=" + $avgDelay + "min!");
+end
+
+// SUM/COUNT: ProseÄni radni sati tima > 7.5h
+rule "Accumulate_TeamHoursWarning"
+    salience 30
+    no-loop true
+    when
+        not Alarm(type == AlarmType.SHIFT_WARNING, entityId == "TEAM")
+        $avgHours : Number(doubleValue > 7.5) from accumulate(
+            Driver(available == true, $h : workingHoursToday),
+            average($h)
+        )
+    then
+        insert(new Alarm(AlarmType.SHIFT_WARNING, "TEAM",
+                "Team avg working hours: " + $avgHours, 0));
+        messages.add("WARNING: team average working hours=" + $avgHours + "h â€” consider shift change!");
+end
+
+// COLLECT LIST: PreviÅ¡e slobodnih kamiona (> 5)
+rule "Accumulate_IdleFleet"
+    salience 30
+    no-loop true
+    when
+        not Alarm(type == AlarmType.IDLE_FLEET, entityId == "FLEET")
+        $idleList : List(size > 5) from accumulate(
+            Truck(status == TruckStatus.AVAILABLE, $id : id),
+            collectList($id)
+        )
+    then
+        insert(new Alarm(AlarmType.IDLE_FLEET, "FLEET",
+                "Too many idle trucks: " + $idleList, $idleList.size()));
+        messages.add("ALERT: " + $idleList.size() + " idle trucks â€” " + $idleList);
+end
