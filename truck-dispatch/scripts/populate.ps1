@@ -1,4 +1,4 @@
-# TruckDispatch — demo skripta za popunjavanje sistema test podacima
+# TruckDispatch -- demo skripta za popunjavanje sistema test podacima
 # Pokreni backend (mvn spring-boot:run) pa onda: .\scripts\populate.ps1
 
 param(
@@ -18,14 +18,14 @@ function Write-Result($result) {
     Write-Host ""
     Write-Host "  Poruke ($($result.messages.Count)):" -ForegroundColor Yellow
     foreach ($msg in $result.messages) {
-        Write-Host "    » $msg" -ForegroundColor Gray
+        Write-Host "    >> $msg" -ForegroundColor Gray
     }
 
     Write-Host ""
     Write-Host "  Nalozi ($($result.processedOrders.Count)):" -ForegroundColor Yellow
     foreach ($o in $result.processedOrders) {
-        $truck  = if ($o.assignedTruckId)  { $o.assignedTruckId }  else { "—" }
-        $driver = if ($o.assignedDriverId) { $o.assignedDriverId } else { "—" }
+        $truck  = if ($o.assignedTruckId)  { $o.assignedTruckId }  else { "--" }
+        $driver = if ($o.assignedDriverId) { $o.assignedDriverId } else { "--" }
         Write-Host ("    {0,-6} {1,-10} {2,-28} kamion={3,-5} vozac={4}" -f `
             $o.id, $o.status, $o.destination, $truck, $driver) -ForegroundColor White
     }
@@ -45,7 +45,7 @@ function Write-Result($result) {
 #            RASHLADNI nalog trazi kamion sa rashladnom jedinicom,
 #            ADR nalog trazi ADR opremu i licencu
 # ============================================================
-Write-Section "SCENARIO 1 — Jutarnji spic, zimski uslovi (07:00, sreda, -3°C)"
+Write-Section "SCENARIO 1 -- Jutarnji spic, zimski uslovi (07:00, sreda, -3C)"
 
 $s1 = @{
     temperature = -3
@@ -97,10 +97,10 @@ try {
 
 # ============================================================
 # SCENARIO 2: Vikend, opasna roba + lomljivi teret
-# Ocekivano: WEEKEND kontekst (60% flote), ADR provjera,
+# Ocekivano: WEEKEND kontekst (60% flote), ADR provera,
 #            samo URGENT i HIGH nalozi prolaze
 # ============================================================
-Write-Section "SCENARIO 2 — Vikend, opasna roba (14:00, subota, 12°C)"
+Write-Section "SCENARIO 2 -- Vikend, opasna roba (14:00, subota, 12C)"
 
 $s2 = @{
     temperature = 12
@@ -148,7 +148,7 @@ try {
 # Ocekivano: NIGHT_MODE kontekst, NORMAL i HIGH nalozi
 #            postaju POSTPONED_UNTIL_MORNING
 # ============================================================
-Write-Section "SCENARIO 3 — Nocni rezim (22:00, cetvrtak, 8°C)"
+Write-Section "SCENARIO 3 -- Nocni rezim (22:00, cetvrtak, 8C)"
 
 $s3 = @{
     temperature = 8
@@ -185,11 +185,11 @@ try {
 }
 
 # ============================================================
-# SCENARIO 4: minTruckType + nocni rezim — fatigue constraint
+# SCENARIO 4: minTruckType + nocni rezim -- fatigue constraint
 # Ocekivano: SMALL kamion iskljucen (nalog zahteva min MEDIUM),
 #            vozac sa fatigueLevel=6 iskljucen u nocnom rezimu
 # ============================================================
-Write-Section "SCENARIO 4 — minTruckType filtriranje + nocni fatigue (22:00, 8°C)"
+Write-Section "SCENARIO 4 -- minTruckType filtriranje + nocni fatigue (22:00, 8C)"
 
 $s4 = @{
     temperature = 8
@@ -226,63 +226,3 @@ try {
 } catch {
     Write-Host "  GRESKA: $($_.Exception.Message)" -ForegroundColor Red
 }
-
-# ============================================================
-# CEP EVENTI
-# ============================================================
-Write-Section "CEP EVENTI — simulacija dogadjaja u floti"
-
-$events = @(
-    @{ type="BREAKDOWN"; entityId="V-01"; value=0;  location="Autoput E75";    opis="Kvar kamiona" },
-    @{ type="DELAY";     entityId="V-02"; value=45; location="Novi Sad centar"; opis="Kasnjenje 45min" },
-    @{ type="FUEL_LEVEL";entityId="V-03"; value=8;  location="Subotica";        opis="Gorivo 8%" },
-    @{ type="POSITION";  entityId="V-04"; value=0;  location="Beograd";         opis="Pozicija update" },
-    @{ type="DELAY";     entityId="V-05"; value=20; location="Nis";             opis="Kasnjenje 20min" }
-)
-
-foreach ($ev in $events) {
-    $body = @{
-        type     = $ev.type
-        entityId = $ev.entityId
-        value    = $ev.value
-        location = $ev.location
-    } | ConvertTo-Json
-
-    Write-Host ""
-    Write-Host "  Slanje: $($ev.opis) [$($ev.type) | $($ev.entityId)]" -ForegroundColor Yellow
-    try {
-        $r = Invoke-RestMethod -Uri "$BaseUrl/event" -Method Post -Headers $headers -Body $body
-        foreach ($msg in $r) {
-            Write-Host "    » $msg" -ForegroundColor Gray
-        }
-        if ($r.Count -eq 0) {
-            Write-Host "    (nema CEP reakcije)" -ForegroundColor DarkGray
-        }
-    } catch {
-        Write-Host "    GRESKA: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-# ============================================================
-# AKTIVNI ALARMI
-# ============================================================
-Write-Section "AKTIVNI ALARMI"
-
-try {
-    $alarms = Invoke-RestMethod -Uri "$BaseUrl/alarms" -Method Get -Headers $headers
-    if ($alarms.Count -eq 0) {
-        Write-Host "  Nema aktivnih alarma." -ForegroundColor Green
-    } else {
-        foreach ($a in $alarms) {
-            Write-Host "  [!] $($a.type) | $($a.entityId) | $($a.message)" -ForegroundColor Red
-        }
-    }
-} catch {
-    Write-Host "  GRESKA: $($_.Exception.Message)" -ForegroundColor Red
-}
-
-Write-Host ""
-Write-Host ("=" * 60) -ForegroundColor Cyan
-Write-Host "  Gotovo. Otvori http://localhost:4200 za prikaz u dashboardu." -ForegroundColor Green
-Write-Host ("=" * 60) -ForegroundColor Cyan
-Write-Host ""

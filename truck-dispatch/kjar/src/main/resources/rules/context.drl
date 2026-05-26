@@ -20,7 +20,7 @@ rule "Context_MorningPeak"
         ctx.setContext(OperationalContext.MORNING_PEAK);
         ctx.setCapacityFactor(1.0);
         ctx.setFleetFactor(1.0);
-        ctx.setDelayThresholdMin(20);
+        ctx.setDelayThresholdMin(45);
         insert(ctx);
         messages.add("Morning peak active: LARGE trucks banned on regional routes");
 end
@@ -37,9 +37,9 @@ rule "Context_EveningPeak"
         ctx.setContext(OperationalContext.EVENING_PEAK);
         ctx.setCapacityFactor(1.0);
         ctx.setFleetFactor(1.0);
-        ctx.setDelayThresholdMin(15);
+        ctx.setDelayThresholdMin(40);
         insert(ctx);
-        messages.add("Evening peak active: delay escalation threshold 15min");
+        messages.add("Evening peak active: delay escalation threshold 40min");
 end
 
 // NOCNI REZIM: 20:00-06:00
@@ -53,7 +53,7 @@ rule "Context_NightMode"
         ctx.setContext(OperationalContext.NIGHT_MODE);
         ctx.setCapacityFactor(1.0);
         ctx.setFleetFactor(1.0);
-        ctx.setDelayThresholdMin(30);
+        ctx.setDelayThresholdMin(15);
         insert(ctx);
         messages.add("Night mode active: only URGENT orders allowed");
 end
