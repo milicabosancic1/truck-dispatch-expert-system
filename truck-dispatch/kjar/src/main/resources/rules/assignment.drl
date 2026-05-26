@@ -14,8 +14,8 @@ import com.truckdispatch.truck_dispatch.model.OperationalContext;
 global java.util.List messages;
 
 // NIVO 4: Finalna dodela
-// Biramo ValidPair sa najvišim score-om gdje su i kamion i vozač još SLOBODNI.
-// not(...and...and...) sprečava dvostruku dodjelu kada više naloga dijeli isti resurs.
+// Biramo ValidPair sa najvišim score-om gde su i kamion i vozač još SLOBODNI.
+// not(...and...and...) sprečava dvostruku dodelu kada više naloga deli isti resurs.
 
 rule "FinalAssignment_Urgent"
     salience 100
