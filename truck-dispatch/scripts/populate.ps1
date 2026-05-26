@@ -226,3 +226,42 @@ try {
 } catch {
     Write-Host "  GRESKA: $($_.Exception.Message)" -ForegroundColor Red
 }
+
+# ============================================================
+# SCENARIO 5: UNFEASIBLE + Vecernji spic
+# Ocekivano: K-11 pretezak (25000kg > 12000kg kapacitet) -> UNFEASIBLE,
+#            K-12 dobija kamion, vecernji spic aktivan (17-20h)
+# ============================================================
+Write-Section "SCENARIO 5 -- UNFEASIBLE nalog + vecernji spic (18:00, utorak, 10C)"
+
+$s5 = @{
+    temperature = 10
+    hour        = 18
+    dayOfWeek   = 2
+    orders = @(
+        @{ id="K-11"; destination="Beograd"; weightKg=25000; cargoType="STANDARDNO";
+           deliveryDeadlineMin=300; priority="NORMAL"; status="NEW"; routeId="R-08" },
+        @{ id="K-12"; destination="Novi Sad"; weightKg=1000; cargoType="STANDARDNO";
+           deliveryDeadlineMin=200; priority="HIGH"; status="NEW"; routeId="R-08" }
+    )
+    trucks = @(
+        @{ id="V-09"; type="LARGE"; maxCapacityKg=12000; status="AVAILABLE";
+           location="Beograd"; fuelPercent=85; hasRefrigerationUnit=$false;
+           hasAdrEquipment=$false; distanceToOriginKm=5; daysSinceRefrigerationService=0 }
+    )
+    drivers = @(
+        @{ id="D-09"; available=$true; workingHoursToday=2; license="CE";
+           hasAdrLicense=$false; fatigueLevel=1; yearsOfExperience=7; recentRouteIds=@() }
+    )
+    routes = @(
+        @{ id="R-08"; roadType="HIGHWAY"; distanceKm=80; estimatedTimeHours=1.0;
+           maxCapacityKg=30000; maxSpeedKmh=130; hasTunnel=$false }
+    )
+} | ConvertTo-Json -Depth 5
+
+try {
+    $r = Invoke-RestMethod -Uri "$BaseUrl/process" -Method Post -Headers $headers -Body $s5
+    Write-Result $r
+} catch {
+    Write-Host "  GRESKA: $($_.Exception.Message)" -ForegroundColor Red
+}

@@ -58,10 +58,7 @@ public class DispatchService {
         }
     }
 
-    // -------------------------------------------------------
-    // Backward chaining fact tables (from spec section 9)
-    // -------------------------------------------------------
-
+    // Backward chaining fact tables 
     private void insertRejectionReasons(KieSession session) {
         session.insert(new RejectionReason("NemaSlobodnogKamiona",       "NalogNedodeljen"));
         session.insert(new RejectionReason("NemaDovoljneNosivosti",      "NemaSlobodnogKamiona"));
@@ -93,9 +90,7 @@ public class DispatchService {
         session.insert(new OrderGroupMembership("STANDARDNO",            "DostavaStandardna"));
     }
 
-    // -------------------------------------------------------
     // Collect results from working memory
-    // -------------------------------------------------------
 
     private DispatchResult buildResult(KieSession session, List<String> messages) {
         DispatchResult result = new DispatchResult();
