@@ -4,7 +4,6 @@ import com.truckdispatch.truck_dispatch.dto.DispatchRequest;
 import com.truckdispatch.truck_dispatch.dto.DispatchResult;
 import com.truckdispatch.truck_dispatch.model.*;
 import com.truckdispatch.truck_dispatch.service.DispatchService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
