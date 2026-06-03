@@ -19,7 +19,7 @@ export class DispatchPanelComponent {
   loading = false;
   error = '';
 
-  cargoTypes: CargoType[] = ['STANDARDNO', 'RASHLADNI', 'OPASNA_ROBA', 'LOMLJIVO'];
+  cargoTypes: CargoType[] = ['STANDARD', 'REFRIGERATED', 'HAZARDOUS', 'FRAGILE'];
   priorities: OrderPriority[] = ['NORMAL', 'HIGH', 'URGENT', 'CRITICAL_DELIVERY'];
   truckTypes: TruckType[] = ['SMALL', 'MEDIUM', 'LARGE'];
   truckStatuses: TruckStatus[] = ['AVAILABLE', 'BUSY', 'BREAKDOWN', 'SERVICE'];
@@ -42,7 +42,7 @@ export class DispatchPanelComponent {
   }
 
   get specialOrders(): number {
-    return this.request.orders.filter(order => order.cargoType !== 'STANDARDNO').length;
+    return this.request.orders.filter(order => order.cargoType !== 'STANDARD').length;
   }
 
   private emptyRequest(): DispatchRequest {
@@ -75,7 +75,7 @@ export class DispatchPanelComponent {
       dayOfWeek: 3,
       orders: [{
         id: 'K-09', destination: 'Beograd', weightKg: 2000,
-        cargoType: 'RASHLADNI', deliveryDeadlineMin: 120,
+        cargoType: 'REFRIGERATED', deliveryDeadlineMin: 120,
         priority: 'URGENT', status: 'NEW', routeId: 'R-01'
       }],
       trucks: [{
@@ -102,12 +102,12 @@ export class DispatchPanelComponent {
       orders: [
         {
           id: 'ADR-01', destination: 'Subotica', weightKg: 1800,
-          cargoType: 'OPASNA_ROBA', deliveryDeadlineMin: 90,
+          cargoType: 'HAZARDOUS', deliveryDeadlineMin: 90,
           priority: 'URGENT', status: 'NEW', routeId: 'R-ADR'
         },
         {
           id: 'STD-02', destination: 'Zrenjanin', weightKg: 2200,
-          cargoType: 'STANDARDNO', deliveryDeadlineMin: 300,
+          cargoType: 'STANDARD', deliveryDeadlineMin: 300,
           priority: 'HIGH', status: 'NEW', routeId: 'R-REG'
         }
       ],
@@ -148,7 +148,7 @@ export class DispatchPanelComponent {
 
   addOrder() {
     this.request.orders.push({
-      id: '', destination: '', weightKg: 0, cargoType: 'STANDARDNO',
+      id: '', destination: '', weightKg: 0, cargoType: 'STANDARD',
       deliveryDeadlineMin: 60, priority: 'NORMAL', status: 'NEW', routeId: ''
     });
   }

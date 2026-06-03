@@ -1,4 +1,4 @@
-export type CargoType = 'STANDARDNO' | 'RASHLADNI' | 'OPASNA_ROBA' | 'LOMLJIVO';
+export type CargoType = 'STANDARD' | 'REFRIGERATED' | 'HAZARDOUS' | 'FRAGILE';
 export type OrderPriority = 'NORMAL' | 'HIGH' | 'URGENT' | 'CRITICAL_DELIVERY';
 export type OrderStatus = 'NEW' | 'VALID' | 'UNFEASIBLE' | 'ASSIGNED' | 'IN_PROGRESS' |
   'WAITING_RESOURCES' | 'WAITING_UNLOADING' | 'REPLANNED' | 'POSTPONED_UNTIL_MORNING' | 'COMPLETED';
