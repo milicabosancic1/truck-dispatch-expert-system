@@ -51,7 +51,7 @@ end
 rule "BC_SpecialOrderCheck"
     salience 20
     when
-        $order : DeliveryOrder(status == OrderStatus.VALID, $type : cargoType.name())
+        $order : DeliveryOrder(status == OrderStatus.ASSIGNED, $type : cargoType.name())
         pripadaKategorijiNaloga( $type, "NalogSpecijalni"; )
     then
         messages.add("Order " + $order.getId() + " is SPECIAL (" + $type + ") - verify truck equipment!");
