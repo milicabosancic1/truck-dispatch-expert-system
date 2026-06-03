@@ -341,12 +341,12 @@ class ForwardChainingTest {
         }
 
         @Test
-        @DisplayName("LARGE truck excluded from REGIONAL route during morning peak")
-        void largeTruckExcludedRegionalMorningPeak() {
-            // During morning peak, LARGE trucks are banned from REGIONAL routes.
-            // MEDIUM is allowed — should be assigned instead.
+        @DisplayName("LARGE truck remains allowed on REGIONAL route during morning peak")
+        void largeTruckAllowedRegionalMorningPeak() {
+            // During morning peak, LARGE trucks are banned only in city zones.
+            // REGIONAL remains allowed, so the better-scored LARGE truck should be assigned.
             Truck tLarge  = truck("TL", TruckType.LARGE,  10000, TruckStatus.AVAILABLE, false, false, 80, 3);
-            Truck tMedium = truck("TM", TruckType.MEDIUM, 5000,  TruckStatus.AVAILABLE, false, false, 80, 8);
+            Truck tMedium = truck("TM", TruckType.MEDIUM, 5000,  TruckStatus.AVAILABLE, false, false, 80, 20);
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
             Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.REGIONAL, 80, 90, false);
@@ -354,8 +354,8 @@ class ForwardChainingTest {
                     req(10, 7, 3, List.of(tLarge, tMedium), List.of(d1, d2), List.of(r),
                             List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
 
-            assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TM");
-            assertThat(res.getMessages()).anyMatch(m -> m.contains("TL") && m.contains("excluded"));
+            assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TL");
+            assertThat(res.getMessages()).noneMatch(m -> m.contains("TL") && m.contains("excluded"));
         }
 
         @Test

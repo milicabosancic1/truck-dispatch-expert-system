@@ -42,7 +42,9 @@ public class DispatchController {
      */
     @PostMapping("/event")
     public ResponseEntity<List<String>> processEvent(@RequestBody FleetEvent event) {
-        event.setTimestamp(System.currentTimeMillis());
+        if (event.getTimestamp() <= 0) {
+            event.setTimestamp(System.currentTimeMillis());
+        }
         return ResponseEntity.ok(cepService.processEvent(event));
     }
 
