@@ -45,7 +45,7 @@ class AccumulateTest {
                                         String truckId, String driverId) {
         DeliveryOrder o = new DeliveryOrder();
         o.setId(id); o.setRouteId(routeId); o.setWeightKg(kg);
-        o.setCargoType(CargoType.STANDARDNO); o.setDeliveryDeadlineMin(300);
+        o.setCargoType(CargoType.STANDARD); o.setDeliveryDeadlineMin(300);
         o.setPriority(OrderPriority.NORMAL); o.setStatus(OrderStatus.ASSIGNED);
         o.setDestination("Beograd");
         o.setAssignedTruckId(truckId); o.setAssignedDriverId(driverId);
@@ -57,7 +57,7 @@ class AccumulateTest {
                                           int delayMin, String truckId, String driverId) {
         DeliveryOrder o = new DeliveryOrder();
         o.setId(id); o.setRouteId(routeId); o.setWeightKg(kg);
-        o.setCargoType(CargoType.STANDARDNO); o.setDeliveryDeadlineMin(300);
+        o.setCargoType(CargoType.STANDARD); o.setDeliveryDeadlineMin(300);
         o.setPriority(OrderPriority.NORMAL); o.setStatus(OrderStatus.IN_PROGRESS);
         o.setDestination("Beograd"); o.setDelayMin(delayMin);
         o.setAssignedTruckId(truckId); o.setAssignedDriverId(driverId);

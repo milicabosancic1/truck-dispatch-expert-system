@@ -35,7 +35,7 @@ class DominoTest {
     private DeliveryOrder delayed(String id, String truckId, int delayMin) {
         DeliveryOrder o = new DeliveryOrder();
         o.setId(id); o.setRouteId("R1"); o.setWeightKg(1000);
-        o.setCargoType(CargoType.STANDARDNO); o.setDeliveryDeadlineMin(300);
+        o.setCargoType(CargoType.STANDARD); o.setDeliveryDeadlineMin(300);
         o.setPriority(OrderPriority.NORMAL); o.setStatus(OrderStatus.IN_PROGRESS);
         o.setDestination("Beograd"); o.setDelayMin(delayMin);
         o.setAssignedTruckId(truckId);
@@ -46,7 +46,7 @@ class DominoTest {
     private DeliveryOrder waiting(String id, String truckId, OrderPriority priority, double weightKg) {
         DeliveryOrder o = new DeliveryOrder();
         o.setId(id); o.setRouteId("R1"); o.setWeightKg(weightKg);
-        o.setCargoType(CargoType.STANDARDNO); o.setDeliveryDeadlineMin(300);
+        o.setCargoType(CargoType.STANDARD); o.setDeliveryDeadlineMin(300);
         o.setPriority(priority); o.setStatus(OrderStatus.WAITING_UNLOADING);
         o.setDestination("Beograd");
         o.setAssignedTruckId(truckId);

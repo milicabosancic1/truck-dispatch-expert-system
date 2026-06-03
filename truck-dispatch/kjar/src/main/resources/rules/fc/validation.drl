@@ -72,7 +72,7 @@ end
 rule "CargoType_Refrigerated_NoFrigoTruck"
     salience 870
     when
-        $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.RASHLADNI)
+        $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.REFRIGERATED)
         not (exists Truck(hasRefrigerationUnit == true))
     then
         modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
@@ -82,7 +82,7 @@ end
 rule "CargoType_ADR_TunnelRoute"
     salience 870
     when
-        $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.OPASNA_ROBA)
+        $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.HAZARDOUS)
         $route : Route(id == $order.routeId, hasTunnel == true)
     then
         messages.add("ADR order " + $order.getId() + " WARNING: route " + $route.getId() + " has tunnel — dispatcher must select alternative route!");

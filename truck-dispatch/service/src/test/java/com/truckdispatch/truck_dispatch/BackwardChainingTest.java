@@ -91,7 +91,7 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 5000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 5000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.UNFEASIBLE);
             assertThat(res.getMessages())
@@ -108,7 +108,7 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 5000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 5000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             // 3-hop leaf nodes (recursion required):
             assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: ZimaRedukujNosivost"));
@@ -129,7 +129,7 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 23, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.HIGH))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.HIGH))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
             assertThat(res.getMessages())
@@ -144,7 +144,7 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
             assertThat(res.getMessages()).noneMatch(m -> m.contains("DIAGNOSIS"));
@@ -165,10 +165,10 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.REFRIGERATED, 300, OrderPriority.NORMAL))));
 
             assertThat(res.getMessages())
-                    .anyMatch(m -> m.contains("is SPECIAL") && m.contains("RASHLADNI"));
+                    .anyMatch(m -> m.contains("is SPECIAL") && m.contains("REFRIGERATED"));
         }
 
         @Test
@@ -179,10 +179,10 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.OPASNA_ROBA, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.HAZARDOUS, 300, OrderPriority.URGENT))));
 
             assertThat(res.getMessages())
-                    .anyMatch(m -> m.contains("is SPECIAL") && m.contains("OPASNA_ROBA"));
+                    .anyMatch(m -> m.contains("is SPECIAL") && m.contains("HAZARDOUS"));
         }
 
         @Test
@@ -194,7 +194,7 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
             assertThat(res.getMessages()).noneMatch(m -> m.contains("is SPECIAL"));
@@ -210,7 +210,7 @@ class BackwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.REFRIGERATED, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.UNFEASIBLE);
             assertThat(res.getMessages()).noneMatch(m -> m.contains("is SPECIAL"));

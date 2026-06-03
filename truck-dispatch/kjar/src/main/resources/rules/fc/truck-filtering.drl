@@ -61,7 +61,7 @@ rule "ExcludeNoFrigoForRefrigerated"
     salience 790
     when
         $candidate : CandidateTruck(
-            order.cargoType == CargoType.RASHLADNI,
+            order.cargoType == CargoType.REFRIGERATED,
             truck.hasRefrigerationUnit == false
         )
     then
@@ -72,7 +72,7 @@ rule "ExcludeNoAdrEquipmentForDangerous"
     salience 790
     when
         $candidate : CandidateTruck(
-            order.cargoType == CargoType.OPASNA_ROBA,
+            order.cargoType == CargoType.HAZARDOUS,
             truck.hasAdrEquipment == false
         )
     then

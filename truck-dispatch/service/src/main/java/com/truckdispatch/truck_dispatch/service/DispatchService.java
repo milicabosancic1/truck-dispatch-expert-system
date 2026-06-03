@@ -85,9 +85,9 @@ public class DispatchService {
         session.insert(new OrderGroupMembership("NalogKomercijalni",     "NalogOpsti"));
         session.insert(new OrderGroupMembership("NalogSpecijalni",       "NalogOpsti"));
         // Map cargo type names to group hierarchy
-        session.insert(new OrderGroupMembership("RASHLADNI",             "NalogSpecijalni"));
-        session.insert(new OrderGroupMembership("OPASNA_ROBA",           "NalogSpecijalni"));
-        session.insert(new OrderGroupMembership("STANDARDNO",            "DostavaStandardna"));
+        session.insert(new OrderGroupMembership("REFRIGERATED",             "NalogSpecijalni"));
+        session.insert(new OrderGroupMembership("HAZARDOUS",           "NalogSpecijalni"));
+        session.insert(new OrderGroupMembership("STANDARD",            "DostavaStandardna"));
     }
 
     // Collect results from working memory

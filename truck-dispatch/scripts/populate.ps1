@@ -52,11 +52,11 @@ $s1 = @{
     hour        = 7
     dayOfWeek   = 3
     orders = @(
-        @{ id="K-01"; destination="Beograd"; weightKg=1800; cargoType="RASHLADNI";
+        @{ id="K-01"; destination="Beograd"; weightKg=1800; cargoType="REFRIGERATED";
            deliveryDeadlineMin=90;  priority="URGENT";   status="NEW"; routeId="R-01" },
-        @{ id="K-02"; destination="Subotica"; weightKg=3000; cargoType="STANDARDNO";
+        @{ id="K-02"; destination="Subotica"; weightKg=3000; cargoType="STANDARD";
            deliveryDeadlineMin=180; priority="HIGH";     status="NEW"; routeId="R-02" },
-        @{ id="K-03"; destination="Nis";     weightKg=500;  cargoType="OPASNA_ROBA";
+        @{ id="K-03"; destination="Nis";     weightKg=500;  cargoType="HAZARDOUS";
            deliveryDeadlineMin=240; priority="NORMAL";   status="NEW"; routeId="R-03" }
     )
     trucks = @(
@@ -107,11 +107,11 @@ $s2 = @{
     hour        = 14
     dayOfWeek   = 6
     orders = @(
-        @{ id="K-04"; destination="Zagreb";     weightKg=800;  cargoType="OPASNA_ROBA";
+        @{ id="K-04"; destination="Zagreb";     weightKg=800;  cargoType="HAZARDOUS";
            deliveryDeadlineMin=300; priority="URGENT";  status="NEW"; routeId="R-04" },
-        @{ id="K-05"; destination="Beograd";    weightKg=200;  cargoType="LOMLJIVO";
+        @{ id="K-05"; destination="Beograd";    weightKg=200;  cargoType="FRAGILE";
            deliveryDeadlineMin=120; priority="HIGH";    status="NEW"; routeId="R-05" },
-        @{ id="K-06"; destination="Kragujevac"; weightKg=4000; cargoType="STANDARDNO";
+        @{ id="K-06"; destination="Kragujevac"; weightKg=4000; cargoType="STANDARD";
            deliveryDeadlineMin=360; priority="NORMAL";  status="NEW"; routeId="R-05" }
     )
     trucks = @(
@@ -155,11 +155,11 @@ $s3 = @{
     hour        = 22
     dayOfWeek   = 4
     orders = @(
-        @{ id="K-07"; destination="Beograd";  weightKg=500;  cargoType="STANDARDNO";
+        @{ id="K-07"; destination="Beograd";  weightKg=500;  cargoType="STANDARD";
            deliveryDeadlineMin=60;  priority="URGENT";  status="NEW"; routeId="R-06" },
-        @{ id="K-08"; destination="Subotica"; weightKg=2000; cargoType="STANDARDNO";
+        @{ id="K-08"; destination="Subotica"; weightKg=2000; cargoType="STANDARD";
            deliveryDeadlineMin=180; priority="HIGH";    status="NEW"; routeId="R-06" },
-        @{ id="K-09"; destination="Pancevo";  weightKg=300;  cargoType="RASHLADNI";
+        @{ id="K-09"; destination="Pancevo";  weightKg=300;  cargoType="REFRIGERATED";
            deliveryDeadlineMin=120; priority="NORMAL";  status="NEW"; routeId="R-06" }
     )
     trucks = @(
@@ -196,7 +196,7 @@ $s4 = @{
     hour        = 22
     dayOfWeek   = 3
     orders = @(
-        @{ id="K-10"; destination="Beograd"; weightKg=500; cargoType="STANDARDNO";
+        @{ id="K-10"; destination="Beograd"; weightKg=500; cargoType="STANDARD";
            deliveryDeadlineMin=50; priority="URGENT"; status="NEW"; routeId="R-07";
            minTruckType="MEDIUM" }
     )
@@ -239,9 +239,9 @@ $s5 = @{
     hour        = 18
     dayOfWeek   = 2
     orders = @(
-        @{ id="K-11"; destination="Beograd"; weightKg=25000; cargoType="STANDARDNO";
+        @{ id="K-11"; destination="Beograd"; weightKg=25000; cargoType="STANDARD";
            deliveryDeadlineMin=300; priority="NORMAL"; status="NEW"; routeId="R-08" },
-        @{ id="K-12"; destination="Novi Sad"; weightKg=1000; cargoType="STANDARDNO";
+        @{ id="K-12"; destination="Novi Sad"; weightKg=1000; cargoType="STANDARD";
            deliveryDeadlineMin=200; priority="HIGH"; status="NEW"; routeId="R-08" }
     )
     trucks = @(

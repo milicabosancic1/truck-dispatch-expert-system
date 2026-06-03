@@ -100,7 +100,7 @@ rule "Score_MalusADR_Inexperienced"
     no-loop true
     when
         $pair : ValidPair($order : order, $driver : driver)
-        DeliveryOrder(this == $order, cargoType == CargoType.OPASNA_ROBA)
+        DeliveryOrder(this == $order, cargoType == CargoType.HAZARDOUS)
         Driver(this == $driver, yearsOfExperience < 3)
     then
         modify($pair) { setScore($pair.getScore() - 35); }
@@ -125,7 +125,7 @@ rule "Score_MalusFragile_FastRoute"
     no-loop true
     when
         $pair : ValidPair($order : order)
-        DeliveryOrder(this == $order, cargoType == CargoType.LOMLJIVO)
+        DeliveryOrder(this == $order, cargoType == CargoType.FRAGILE)
         $route : Route(id == $order.routeId, maxSpeedKmh > 80)
     then
         modify($pair) { setScore($pair.getScore() - 20); }

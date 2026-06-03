@@ -109,8 +109,8 @@ class TruckDispatchApplicationTests {
         Route r14 = makeRoute("R-14", RoadType.HIGHWAY, 130, 120, false);
         Route r02 = makeRoute("R-02", RoadType.CITY,    20,  50, false);
 
-        DeliveryOrder o201 = makeOrder("201", "R-14", 4800, CargoType.RASHLADNI, 180, OrderPriority.HIGH);
-        DeliveryOrder o202 = makeOrder("202", "R-02", 2100, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+        DeliveryOrder o201 = makeOrder("201", "R-14", 4800, CargoType.REFRIGERATED, 180, OrderPriority.HIGH);
+        DeliveryOrder o202 = makeOrder("202", "R-02", 2100, CargoType.STANDARD, 300, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(-3.0);
@@ -156,7 +156,7 @@ class TruckDispatchApplicationTests {
         Truck k09 = makeTruck("K-09", TruckType.MEDIUM, 6000, TruckStatus.AVAILABLE, false, false, 80, 5);
         Driver v05 = makeDriver("V-05", true, 2, "C", false, 2, 5);
         Route r1  = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
-        DeliveryOrder order = makeOrder("300", "R-01", 5500, CargoType.STANDARDNO, 240, OrderPriority.NORMAL);
+        DeliveryOrder order = makeOrder("300", "R-01", 5500, CargoType.STANDARD, 240, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(-3.0);
@@ -187,9 +187,9 @@ class TruckDispatchApplicationTests {
         Route  r1   = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
 
         // Urgent order (deadline 90min < 120)
-        DeliveryOrder urgent = makeOrder("U-01", "R-01", 2000, CargoType.STANDARDNO, 90, OrderPriority.NORMAL);
+        DeliveryOrder urgent = makeOrder("U-01", "R-01", 2000, CargoType.STANDARD, 90, OrderPriority.NORMAL);
         // Normal order
-        DeliveryOrder normal = makeOrder("N-01", "R-01", 2000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+        DeliveryOrder normal = makeOrder("N-01", "R-01", 2000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(10.0);
@@ -221,7 +221,7 @@ class TruckDispatchApplicationTests {
         Truck nonFrigo = makeTruck("K-05", TruckType.MEDIUM, 8000, TruckStatus.AVAILABLE, false, false, 80, 5);
         Driver driver  = makeDriver("V-01", true, 2, "C", false, 1, 4);
         Route  route   = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
-        DeliveryOrder order = makeOrder("R-01", "R-01", 2000, CargoType.RASHLADNI, 240, OrderPriority.NORMAL);
+        DeliveryOrder order = makeOrder("R-01", "R-01", 2000, CargoType.REFRIGERATED, 240, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(15.0);
@@ -257,7 +257,7 @@ class TruckDispatchApplicationTests {
         Driver dUnknown  = makeDriver("V-NEW", true, 2, "C", false, 3, 4);
 
         Route  route  = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
-        DeliveryOrder order = makeOrder("O-01", "R-01", 2000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+        DeliveryOrder order = makeOrder("O-01", "R-01", 2000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(10.0);
@@ -288,7 +288,7 @@ class TruckDispatchApplicationTests {
         Truck  truck  = makeTruck("K-01", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
         Driver driver = makeDriver("V-01", true, 2, "C", false, 2, 4);
         Route  route  = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
-        DeliveryOrder order = makeOrder("N-01", "R-01", 2000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+        DeliveryOrder order = makeOrder("N-01", "R-01", 2000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(10.0);
@@ -322,13 +322,13 @@ class TruckDispatchApplicationTests {
         Route route = makeRoute("R-07", RoadType.HIGHWAY, 150, 120, false);
 
         // Order in progress — delayed 25 min
-        DeliveryOrder n105 = makeOrder("105", "R-07", 2000, CargoType.STANDARDNO, 60, OrderPriority.NORMAL);
+        DeliveryOrder n105 = makeOrder("105", "R-07", 2000, CargoType.STANDARD, 60, OrderPriority.NORMAL);
         n105.setStatus(OrderStatus.IN_PROGRESS);
         n105.setAssignedTruckId("K-07");
         n105.setDelayMin(25);
 
         // Order waiting for same truck to unload
-        DeliveryOrder n106 = makeOrder("106", "R-07", 1500, CargoType.STANDARDNO, 90, OrderPriority.NORMAL);
+        DeliveryOrder n106 = makeOrder("106", "R-07", 1500, CargoType.STANDARD, 90, OrderPriority.NORMAL);
         n106.setStatus(OrderStatus.WAITING_UNLOADING);
         n106.setAssignedTruckId("K-07");
 
@@ -359,7 +359,7 @@ class TruckDispatchApplicationTests {
         // No trucks at all → order will be WAITING_RESOURCES → BC fires
         Driver driver = makeDriver("V-01", true, 2, "C", false, 2, 4);
         Route  route  = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
-        DeliveryOrder order = makeOrder("BC-01", "R-01", 2000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+        DeliveryOrder order = makeOrder("BC-01", "R-01", 2000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(10.0);
@@ -389,12 +389,12 @@ class TruckDispatchApplicationTests {
         Route  r   = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
 
         // Two assigned orders to same driver, total 21000kg
-        DeliveryOrder o1 = makeOrder("O-01", "R-01", 11000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+        DeliveryOrder o1 = makeOrder("O-01", "R-01", 11000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
         o1.setStatus(OrderStatus.ASSIGNED);
         o1.setAssignedTruckId("K-01");
         o1.setAssignedDriverId("V-01");
 
-        DeliveryOrder o2 = makeOrder("O-02", "R-01", 10100, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+        DeliveryOrder o2 = makeOrder("O-02", "R-01", 10100, CargoType.STANDARD, 300, OrderPriority.NORMAL);
         o2.setStatus(OrderStatus.ASSIGNED);
         o2.setAssignedTruckId("K-01");
         o2.setAssignedDriverId("V-01");

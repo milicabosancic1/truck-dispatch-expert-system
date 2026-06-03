@@ -20,7 +20,7 @@ rule "CreateValidPair"
     salience 700
     when
         not DispatchContext(context == OperationalContext.NIGHT_MODE)
-        $candidate : CandidateTruck($order : order, order.cargoType != CargoType.OPASNA_ROBA, $truck : truck)
+        $candidate : CandidateTruck($order : order, order.cargoType != CargoType.HAZARDOUS, $truck : truck)
         $driver : Driver(
             available == true,
             workingHoursToday < 8.0,
@@ -37,7 +37,7 @@ rule "CreateValidPair_NightMode"
     salience 700
     when
         DispatchContext(context == OperationalContext.NIGHT_MODE)
-        $candidate : CandidateTruck($order : order, order.cargoType != CargoType.OPASNA_ROBA, $truck : truck)
+        $candidate : CandidateTruck($order : order, order.cargoType != CargoType.HAZARDOUS, $truck : truck)
         $driver : Driver(
             available == true,
             workingHoursToday < 8.0,
@@ -54,7 +54,7 @@ rule "CreateValidPair_ADR"
     salience 700
     when
         not DispatchContext(context == OperationalContext.NIGHT_MODE)
-        $candidate : CandidateTruck($order : order, order.cargoType == CargoType.OPASNA_ROBA, $truck : truck)
+        $candidate : CandidateTruck($order : order, order.cargoType == CargoType.HAZARDOUS, $truck : truck)
         $driver : Driver(
             available == true,
             workingHoursToday < 8.0,
@@ -72,7 +72,7 @@ rule "CreateValidPair_ADR_NightMode"
     salience 700
     when
         DispatchContext(context == OperationalContext.NIGHT_MODE)
-        $candidate : CandidateTruck($order : order, order.cargoType == CargoType.OPASNA_ROBA, $truck : truck)
+        $candidate : CandidateTruck($order : order, order.cargoType == CargoType.HAZARDOUS, $truck : truck)
         $driver : Driver(
             available == true,
             workingHoursToday < 8.0,
@@ -89,7 +89,7 @@ end
 rule "ExcludeDriver_NoADR"
     salience 710
     when
-        $candidate : CandidateTruck($order : order, order.cargoType == CargoType.OPASNA_ROBA)
+        $candidate : CandidateTruck($order : order, order.cargoType == CargoType.HAZARDOUS)
         $driver : Driver(hasAdrLicense == false)
     then
         messages.add("Driver " + $driver.getId() + " excluded -- no ADR license for order " + $order.getId());

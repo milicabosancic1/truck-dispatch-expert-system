@@ -56,7 +56,7 @@ class CepServiceTest {
         order.setId(id);
         order.setDestination("Beograd");
         order.setWeightKg(weightKg);
-        order.setCargoType(CargoType.STANDARDNO);
+        order.setCargoType(CargoType.STANDARD);
         order.setDeliveryDeadlineMin(120);
         order.setPriority(OrderPriority.URGENT);
         order.setStatus(OrderStatus.IN_PROGRESS);

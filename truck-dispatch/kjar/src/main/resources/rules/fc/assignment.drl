@@ -71,7 +71,7 @@ end
 rule "PostValidation_RefrigerationService"
     salience 40
     when
-        $order : DeliveryOrder(status == OrderStatus.ASSIGNED, cargoType == CargoType.RASHLADNI,
+        $order : DeliveryOrder(status == OrderStatus.ASSIGNED, cargoType == CargoType.REFRIGERATED,
                                $truckId : assignedTruckId)
         $truck : Truck(id == $truckId, daysSinceRefrigerationService > 30)
     then

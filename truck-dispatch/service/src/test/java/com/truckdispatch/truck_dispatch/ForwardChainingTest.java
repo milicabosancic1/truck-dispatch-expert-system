@@ -90,7 +90,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 18, 2, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(res.getMessages()).anyMatch(m -> m.contains("Evening peak"));
         }
@@ -103,7 +103,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 6, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.URGENT))));
 
             assertThat(res.getMessages()).anyMatch(m -> m.contains("Weekend"));
         }
@@ -116,7 +116,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(-5, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(res.getMessages()).anyMatch(m -> m.contains("Winter conditions"));
         }
@@ -129,7 +129,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 7, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(res.getMessages()).anyMatch(m -> m.contains("Morning peak"));
         }
@@ -149,7 +149,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 3000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 3000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
         }
@@ -162,7 +162,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 5000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 5000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.UNFEASIBLE);
         }
@@ -176,7 +176,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(-3, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 5500, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 5500, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.UNFEASIBLE);
             assertThat(res.getMessages()).anyMatch(m -> m.contains("winter") || m.contains("Winter"));
@@ -190,7 +190,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 90, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 90, OrderPriority.NORMAL))));
 
             assertThat(res.getMessages()).anyMatch(m -> m.contains("URGENT") && m.contains("O1"));
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
@@ -204,7 +204,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 23, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.HIGH))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.HIGH))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
             assertThat(res.getMessages()).anyMatch(m -> m.contains("Night mode") && m.contains("O1"));
@@ -218,7 +218,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 22, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.URGENT))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
         }
@@ -231,7 +231,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 6, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
             assertThat(res.getMessages()).anyMatch(m -> m.contains("Weekend") && m.contains("O1"));
@@ -245,7 +245,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 7, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.HIGH))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.HIGH))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
         }
@@ -258,8 +258,8 @@ class ForwardChainingTest {
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
             Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
             Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
-            DeliveryOrder o1 = order("O1", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.HIGH);
-            DeliveryOrder o2 = order("O2", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.NORMAL);
+            DeliveryOrder o1 = order("O1", "R1", 1000, CargoType.REFRIGERATED, 300, OrderPriority.HIGH);
+            DeliveryOrder o2 = order("O2", "R1", 1000, CargoType.REFRIGERATED, 300, OrderPriority.NORMAL);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(frigo), List.of(d1, d2), List.of(r), List.of(o1, o2)));
 
@@ -282,7 +282,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.REFRIGERATED, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.UNFEASIBLE);
         }
@@ -295,7 +295,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.REGIONAL, 100, 90, true); // hasTunnel=true
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.OPASNA_ROBA, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.HAZARDOUS, 300, OrderPriority.URGENT))));
 
             assertThat(res.getMessages()).anyMatch(m -> m.contains("tunnel"));
         }
@@ -318,7 +318,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(tFrigo, tNoFrigo), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.REFRIGERATED, 300, OrderPriority.NORMAL))));
 
             DeliveryOrder o = find(res, "O1");
             assertThat(o.getStatus()).isEqualTo(OrderStatus.ASSIGNED);
@@ -334,7 +334,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(tAdr, tNoAdr), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.OPASNA_ROBA, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.HAZARDOUS, 300, OrderPriority.URGENT))));
 
             assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TA");
             assertThat(res.getMessages()).anyMatch(m -> m.contains("TN") && m.contains("ADR"));
@@ -352,7 +352,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.REGIONAL, 80, 90, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 7, 3, List.of(tLarge, tMedium), List.of(d1, d2), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TL");
             assertThat(res.getMessages()).noneMatch(m -> m.contains("TL") && m.contains("excluded"));
@@ -365,7 +365,7 @@ class ForwardChainingTest {
             Truck tMedium = truck("TM", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
-            DeliveryOrder o = order("O1", "R1", 500, CargoType.STANDARDNO, 300, OrderPriority.NORMAL);
+            DeliveryOrder o = order("O1", "R1", 500, CargoType.STANDARD, 300, OrderPriority.NORMAL);
             o.setMinTruckType(TruckType.MEDIUM);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(tSmall, tMedium), List.of(d), List.of(r), List.of(o)));
@@ -383,7 +383,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.CITY, 20, 50, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 10, 3, List.of(tMedium), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
         }
@@ -404,7 +404,7 @@ class ForwardChainingTest {
             Route  r       = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(dAdr, dNoAdr), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.OPASNA_ROBA, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.HAZARDOUS, 300, OrderPriority.URGENT))));
 
             DeliveryOrder o = find(res, "O1");
             assertThat(o.getStatus()).isEqualTo(OrderStatus.ASSIGNED);
@@ -420,7 +420,7 @@ class ForwardChainingTest {
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(dNoAdr), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.OPASNA_ROBA, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.HAZARDOUS, 300, OrderPriority.URGENT))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
         }
@@ -434,7 +434,7 @@ class ForwardChainingTest {
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(dTired, dFresh), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getAssignedDriverId()).isEqualTo("DF");
         }
@@ -448,7 +448,7 @@ class ForwardChainingTest {
             Route  r       = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(dFatigued, dFresh), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getAssignedDriverId()).isEqualTo("DF");
         }
@@ -462,7 +462,7 @@ class ForwardChainingTest {
             Route  r       = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(tMedium), List.of(dB, dCE), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getAssignedDriverId()).isEqualTo("DC");
         }
@@ -476,7 +476,7 @@ class ForwardChainingTest {
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 22, 3, List.of(t), List.of(dTired, dFresh), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.URGENT))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
             assertThat(find(res, "O1").getAssignedDriverId()).isEqualTo("DF");
@@ -491,7 +491,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
             assertThat(res.getMessages()).anyMatch(m -> m.contains("O1") && m.contains("waiting"));
@@ -515,7 +515,7 @@ class ForwardChainingTest {
             Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(tClose, tFar), List.of(d1, d2), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TC");
         }
@@ -532,7 +532,7 @@ class ForwardChainingTest {
             Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(tSmall, tLarge), List.of(d1, d2), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TS");
         }
@@ -547,7 +547,7 @@ class ForwardChainingTest {
             Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(tLowFuel, tGoodFuel), List.of(d1, d2), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             // Low fuel truck: 100 + 25(proximity) - 25(fuel) = 100
             // Good fuel truck: 100 + 0(proximity) = 100 → same base, but message about fuel malus
@@ -567,7 +567,7 @@ class ForwardChainingTest {
             r.setEstimatedTimeHours(100.0 / 120); r.setMaxCapacityKg(24000);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.LOMLJIVO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.FRAGILE, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
             assertThat(res.getMessages()).anyMatch(m -> m.contains("score=90"));
@@ -583,7 +583,7 @@ class ForwardChainingTest {
             Route  r  = route("R1", RoadType.CITY, 20, 50, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 10, 3, List.of(tSmall, tMedium), List.of(d1, d2), List.of(r),
-                            List.of(order("O1", "R1", 500, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 500, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             // SMALL+CITY gets template +15; MEDIUM excluded from CITY → only SMALL qualifies
             assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TS");
@@ -598,7 +598,7 @@ class ForwardChainingTest {
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(dExp, dInexp), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.OPASNA_ROBA, 300, OrderPriority.URGENT))));
+                            List.of(order("O1", "R1", 1000, CargoType.HAZARDOUS, 300, OrderPriority.URGENT))));
 
             assertThat(find(res, "O1").getAssignedDriverId()).isEqualTo("DE");
             assertThat(res.getMessages()).anyMatch(m -> m.contains("DI") && m.contains("inexperienced"));
@@ -617,8 +617,8 @@ class ForwardChainingTest {
             Truck  t  = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d  = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
-            DeliveryOrder oUrgent = order("OU", "R1", 2000, CargoType.STANDARDNO, 300, OrderPriority.URGENT);
-            DeliveryOrder oHigh   = order("OH", "R1", 2000, CargoType.STANDARDNO, 300, OrderPriority.HIGH);
+            DeliveryOrder oUrgent = order("OU", "R1", 2000, CargoType.STANDARD, 300, OrderPriority.URGENT);
+            DeliveryOrder oHigh   = order("OH", "R1", 2000, CargoType.STANDARD, 300, OrderPriority.HIGH);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r), List.of(oUrgent, oHigh)));
 
@@ -635,8 +635,8 @@ class ForwardChainingTest {
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
             Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
             Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
-            DeliveryOrder o1 = order("O1", "R1", 2000, CargoType.STANDARDNO, 300, OrderPriority.HIGH);
-            DeliveryOrder o2 = order("O2", "R1", 2000, CargoType.STANDARDNO, 300, OrderPriority.HIGH);
+            DeliveryOrder o1 = order("O1", "R1", 2000, CargoType.STANDARD, 300, OrderPriority.HIGH);
+            DeliveryOrder o2 = order("O2", "R1", 2000, CargoType.STANDARD, 300, OrderPriority.HIGH);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d1, d2), List.of(r), List.of(o1, o2)));
 
@@ -663,8 +663,8 @@ class ForwardChainingTest {
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
             Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
             Route  r  = route("R1", RoadType.HIGHWAY, 100, 120, false);
-            DeliveryOrder o1 = order("O1", "R1", 2000, CargoType.STANDARDNO, 300, OrderPriority.HIGH);
-            DeliveryOrder o2 = order("O2", "R1", 2000, CargoType.STANDARDNO, 300, OrderPriority.HIGH);
+            DeliveryOrder o1 = order("O1", "R1", 2000, CargoType.STANDARD, 300, OrderPriority.HIGH);
+            DeliveryOrder o2 = order("O2", "R1", 2000, CargoType.STANDARD, 300, OrderPriority.HIGH);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t1, t2), List.of(d1, d2), List.of(r), List.of(o1, o2)));
 
@@ -684,7 +684,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.RASHLADNI, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.REFRIGERATED, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
             assertThat(res.getMessages()).anyMatch(m -> m.contains("refriger") && m.contains("30"));
@@ -698,7 +698,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.NORMAL))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
             assertThat(res.getMessages()).anyMatch(m -> m.contains("fuel") || m.contains("goriv"));
@@ -711,8 +711,8 @@ class ForwardChainingTest {
             Truck  t      = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, true, 80, 5);
             Driver dAdr   = driver("DA", true, 1, "CE", true, 1, 5);
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
-            DeliveryOrder oUrgent = order("OU", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.URGENT);
-            DeliveryOrder oAdr    = order("OA", "R1", 1000, CargoType.OPASNA_ROBA, 300, OrderPriority.URGENT);
+            DeliveryOrder oUrgent = order("OU", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.URGENT);
+            DeliveryOrder oAdr    = order("OA", "R1", 1000, CargoType.HAZARDOUS, 300, OrderPriority.URGENT);
             DispatchResult res = dispatchService.processDispatch(
                     req(15, 10, 3, List.of(t), List.of(dAdr), List.of(r), List.of(oUrgent, oAdr)));
 
@@ -738,7 +738,7 @@ class ForwardChainingTest {
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 23, 3, List.of(t), List.of(d), List.of(r),
-                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.HIGH))));
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.HIGH))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
             assertThat(res.getMessages())
@@ -752,7 +752,7 @@ class ForwardChainingTest {
             // Pre-set IN_PROGRESS order with delayMin=45 > 40 → alert fires
             DeliveryOrder o = new DeliveryOrder();
             o.setId("O1"); o.setRouteId("R1"); o.setWeightKg(1000);
-            o.setCargoType(CargoType.STANDARDNO); o.setDeliveryDeadlineMin(300);
+            o.setCargoType(CargoType.STANDARD); o.setDeliveryDeadlineMin(300);
             o.setPriority(OrderPriority.NORMAL); o.setStatus(OrderStatus.IN_PROGRESS);
             o.setDestination("Beograd"); o.setDelayMin(45);
             o.setAssignedTruckId("T1");
