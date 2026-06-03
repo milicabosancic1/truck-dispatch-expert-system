@@ -8,7 +8,7 @@ import com.truckdispatch.truck_dispatch.model.OrderStatus;
 global java.util.List messages;
 
 // BACKWARD CHAINING - Query 1: isCauseOfRejection
-// Diagnoses why an order was not assigned -- recursively traces the cause chain
+// Dijagnostika zašto nalog nije dodeljen — rekurzivno pretražuje lanac uzroka
 
 query "isCauseOfRejection" (String cause, String effect)
     RejectionReason( cause == cause, effect == effect )
@@ -17,7 +17,7 @@ query "isCauseOfRejection" (String cause, String effect)
       isCauseOfRejection( $intermediate, effect; ) )
 end
 
-// Rule: diagnose winter capacity reduction as root cause
+// Pravilo: dijagnostika kada su zimski uslovi uzrok nedodele
 rule "BC_Diagnosis_Winter"
     salience 20
     when
@@ -27,7 +27,7 @@ rule "BC_Diagnosis_Winter"
         messages.add("Order " + $order.getId() + " DIAGNOSIS: winter conditions reduced effective capacity - no truck available!");
 end
 
-// Rule: report all root causes of rejection (unbound cause)
+// Pravilo: prikazuje sve uzroke nedodele (cause je slobodna promenljiva)
 rule "BC_Diagnosis_AllCauses"
     salience 20
     when
@@ -38,7 +38,7 @@ rule "BC_Diagnosis_AllCauses"
 end
 
 // BACKWARD CHAINING - Query 2: belongsToOrderCategory
-// Order type hierarchy -- recursive classification
+// Hijerarhija tipova naloga — rekurzivna klasifikacija
 
 query "belongsToOrderCategory" (String item, String category)
     OrderGroupMembership( item == item, group == category )
@@ -47,7 +47,7 @@ query "belongsToOrderCategory" (String item, String category)
       belongsToOrderCategory( $midCategory, category; ) )
 end
 
-// Rule: special order detected -- verify truck equipment
+// Pravilo: specijalni nalog — provjeri opremu kamiona
 rule "BC_SpecialOrderCheck"
     salience 20
     when
