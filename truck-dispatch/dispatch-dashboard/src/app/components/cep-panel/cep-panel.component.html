@@ -1,9 +1,16 @@
 <div class="panel">
   <div class="panel-header">
-    <h2>Fleet Event (CEP)</h2>
+    <div>
+      <p class="eyebrow">Real-time stream</p>
+      <h2>Fleet Event (CEP)</h2>
+    </div>
   </div>
 
   <section class="card">
+    <div class="section-header">
+      <h3>Event payload</h3>
+      <p class="section-meta">Submitted to the Drools stream session</p>
+    </div>
     <div class="form-row">
       <label>Event Type
         <select [(ngModel)]="event.type">
@@ -27,7 +34,10 @@
 
   @if (messages.length > 0) {
     <section class="card">
-      <h3>CEP Response</h3>
+      <div class="section-header">
+        <h3>CEP Response</h3>
+        <p class="section-meta">{{ messages.length }} messages</p>
+      </div>
       <ul class="message-list">
         @for (msg of messages; track $index) {
           <li>{{ msg }}</li>

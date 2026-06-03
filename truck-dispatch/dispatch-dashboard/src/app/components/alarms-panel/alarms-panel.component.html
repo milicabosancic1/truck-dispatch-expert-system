@@ -1,6 +1,9 @@
 <div class="panel">
   <div class="panel-header">
-    <h2>Active Alarms</h2>
+    <div>
+      <p class="eyebrow">Monitoring</p>
+      <h2>Active Alarms</h2>
+    </div>
     <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">
       {{ loading ? 'Loading...' : 'Refresh' }}
     </button>
@@ -11,8 +14,12 @@
   }
 
   <section class="card">
+    <div class="section-header">
+      <h3>Alarm list</h3>
+      <p class="section-meta">{{ alarms.length }} active alarms</p>
+    </div>
     @if (alarms.length === 0 && !loading) {
-      <p class="empty-state">No active alarms.</p>
+      <p class="empty-state compact-empty">No active alarms.</p>
     } @else {
       <div class="table-wrap">
         <table>
@@ -28,7 +35,7 @@
             @for (alarm of alarms; track $index) {
               <tr>
                 <td><span class="badge badge-alarm">{{ alarm.type }}</span></td>
-                <td>{{ alarm.entityId }}</td>
+                <td class="strong-cell">{{ alarm.entityId }}</td>
                 <td>{{ alarm.message }}</td>
                 <td>{{ alarm.affectedCount }}</td>
               </tr>

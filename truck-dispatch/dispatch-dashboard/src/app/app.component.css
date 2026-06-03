@@ -2,57 +2,107 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #eef1f5;
 }
 
 .dashboard-header {
-  background: #1a1a2e;
+  background: #172033;
   color: #fff;
-  padding: 0 24px;
+  padding: 0 28px;
   display: flex;
   align-items: center;
-  gap: 32px;
-  height: 56px;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 64px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
 }
 
 .dashboard-title {
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #a5b4fc;
+  letter-spacing: 0;
+  color: #fff;
 }
 
-.tabs { display: flex; gap: 4px; }
+.brand span {
+  font-size: 12px;
+  color: #aab3c5;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255,255,255,.07);
+  border-radius: 8px;
+}
 
 .tab-btn {
-  padding: 6px 16px;
+  padding: 7px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
   background: transparent;
-  color: #9ca3af;
+  color: #cbd5e1;
   transition: all 0.15s;
 }
 .tab-btn:hover { color: #e5e7eb; background: rgba(255,255,255,.08); }
-.tab-btn.active { background: #4f46e5; color: #fff; }
+.tab-btn.active { background: #fff; color: #172033; }
 
 .dashboard-body {
   flex: 1;
-  padding: 24px;
-  max-width: 1400px;
+  padding: 20px;
+  max-width: 1600px;
   width: 100%;
   margin: 0 auto;
 }
 
 .dispatch-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(420px, .85fr);
+  gap: 20px;
   align-items: start;
 }
 
+.empty-results {
+  min-height: 420px;
+}
+
+.empty-results-inner {
+  height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 32px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.empty-results h2 {
+  max-width: 360px;
+  font-size: 20px;
+  line-height: 1.35;
+  color: #334155;
+}
+
 @media (max-width: 1000px) {
+  .dashboard-header {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .tabs { overflow-x: auto; }
   .dispatch-layout { grid-template-columns: 1fr; }
 }

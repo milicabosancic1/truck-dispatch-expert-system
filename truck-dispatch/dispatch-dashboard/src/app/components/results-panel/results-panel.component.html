@@ -1,19 +1,35 @@
-<div class="panel">
+<div class="panel results-panel">
   <div class="panel-header">
-    <h2>Dispatch Result</h2>
+    <div>
+      <p class="eyebrow">Engine output</p>
+      <h2>Dispatch Result</h2>
+    </div>
   </div>
 
-  <section class="card">
-    <h3>Messages ({{ result.messages.length }})</h3>
-    <ul class="message-list">
-      @for (msg of result.messages; track $index) {
-        <li>{{ msg }}</li>
-      }
-    </ul>
+  <section class="summary-strip result-summary">
+    <div class="summary-cell success">
+      <span>Assigned</span>
+      <strong>{{ assignedCount }}</strong>
+    </div>
+    <div class="summary-cell warning">
+      <span>Waiting</span>
+      <strong>{{ waitingCount }}</strong>
+    </div>
+    <div class="summary-cell danger">
+      <span>Issues</span>
+      <strong>{{ issueCount }}</strong>
+    </div>
+    <div class="summary-cell">
+      <span>Messages</span>
+      <strong>{{ result.messages.length }}</strong>
+    </div>
   </section>
 
   <section class="card">
-    <h3>Processed Orders ({{ result.processedOrders.length }})</h3>
+    <div class="section-header">
+      <h3>Processed Orders</h3>
+      <p class="section-meta">{{ result.processedOrders.length }} orders returned</p>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -25,20 +41,20 @@
             <th>Cargo</th>
             <th>Truck</th>
             <th>Driver</th>
-            <th>Delay (min)</th>
+            <th>Delay</th>
           </tr>
         </thead>
         <tbody>
           @for (order of result.processedOrders; track order.id) {
             <tr [class]="'status-' + order.status.toLowerCase()">
-              <td>{{ order.id }}</td>
+              <td class="strong-cell">{{ order.id }}</td>
               <td>{{ order.destination }}</td>
               <td><span class="badge badge-{{ order.status.toLowerCase() }}">{{ order.status }}</span></td>
               <td>{{ order.priority }}</td>
               <td>{{ order.cargoType }}</td>
-              <td>{{ order.assignedTruckId || '—' }}</td>
-              <td>{{ order.assignedDriverId || '—' }}</td>
-              <td>{{ order.delayMin ?? '—' }}</td>
+              <td>{{ order.assignedTruckId || '-' }}</td>
+              <td>{{ order.assignedDriverId || '-' }}</td>
+              <td>{{ order.delayMin ?? '-' }}</td>
             </tr>
           }
         </tbody>
@@ -46,9 +62,28 @@
     </div>
   </section>
 
+  <section class="card">
+    <div class="section-header">
+      <h3>Rule Trace</h3>
+      <p class="section-meta">{{ result.messages.length }} messages</p>
+    </div>
+    @if (result.messages.length === 0) {
+      <p class="empty-state compact-empty">No messages returned.</p>
+    } @else {
+      <ul class="message-list">
+        @for (msg of result.messages; track $index) {
+          <li>{{ msg }}</li>
+        }
+      </ul>
+    }
+  </section>
+
   @if (result.alarms.length > 0) {
     <section class="card">
-      <h3>Alarms ({{ result.alarms.length }})</h3>
+      <div class="section-header">
+        <h3>Alarms</h3>
+        <p class="section-meta">{{ result.alarms.length }} active alarms</p>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -63,7 +98,7 @@
             @for (alarm of result.alarms; track $index) {
               <tr>
                 <td><span class="badge badge-alarm">{{ alarm.type }}</span></td>
-                <td>{{ alarm.entityId }}</td>
+                <td class="strong-cell">{{ alarm.entityId }}</td>
                 <td>{{ alarm.message }}</td>
                 <td>{{ alarm.affectedCount }}</td>
               </tr>

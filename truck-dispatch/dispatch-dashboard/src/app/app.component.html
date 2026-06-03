@@ -1,6 +1,9 @@
 <div class="dashboard">
   <header class="dashboard-header">
-    <h1 class="dashboard-title">TruckDispatch</h1>
+    <div class="brand">
+      <h1 class="dashboard-title">TruckDispatch</h1>
+      <span>Knowledge-based fleet dispatch</span>
+    </div>
     <nav class="tabs">
       <button class="tab-btn" [class.active]="tab === 'dispatch'" (click)="tab = 'dispatch'">Dispatch</button>
       <button class="tab-btn" [class.active]="tab === 'events'" (click)="tab = 'events'">Fleet Events</button>
@@ -14,6 +17,13 @@
         <app-dispatch-panel (resultReady)="onResult($event)" />
         @if (result) {
           <app-results-panel [result]="result" />
+        } @else {
+          <section class="panel empty-results">
+            <div class="empty-results-inner">
+              <p class="eyebrow">No run yet</p>
+              <h2>Results appear here after dispatch processing.</h2>
+            </div>
+          </section>
         }
       </div>
     }

@@ -29,6 +29,22 @@ export class DispatchPanelComponent {
 
   constructor(private dispatchService: DispatchService) {}
 
+  get totalWeightKg(): number {
+    return this.request.orders.reduce((sum, order) => sum + Number(order.weightKg || 0), 0);
+  }
+
+  get availableTrucks(): number {
+    return this.request.trucks.filter(truck => truck.status === 'AVAILABLE').length;
+  }
+
+  get availableDrivers(): number {
+    return this.request.drivers.filter(driver => driver.available).length;
+  }
+
+  get specialOrders(): number {
+    return this.request.orders.filter(order => order.cargoType !== 'STANDARDNO').length;
+  }
+
   private emptyRequest(): DispatchRequest {
     return {
       temperature: 15,
@@ -75,6 +91,58 @@ export class DispatchPanelComponent {
         id: 'R-01', roadType: 'REGIONAL', distanceKm: 80, estimatedTimeHours: 2,
         maxCapacityKg: 10000, maxSpeedKmh: 90, hasTunnel: false
       }]
+    };
+  }
+
+  loadIncidentDemo() {
+    this.request = {
+      temperature: 8,
+      hour: 18,
+      dayOfWeek: 4,
+      orders: [
+        {
+          id: 'ADR-01', destination: 'Subotica', weightKg: 1800,
+          cargoType: 'OPASNA_ROBA', deliveryDeadlineMin: 90,
+          priority: 'URGENT', status: 'NEW', routeId: 'R-ADR'
+        },
+        {
+          id: 'STD-02', destination: 'Zrenjanin', weightKg: 2200,
+          cargoType: 'STANDARDNO', deliveryDeadlineMin: 300,
+          priority: 'HIGH', status: 'NEW', routeId: 'R-REG'
+        }
+      ],
+      trucks: [
+        {
+          id: 'K-ADR', type: 'MEDIUM', maxCapacityKg: 6000, status: 'AVAILABLE',
+          location: 'Novi Sad', fuelPercent: 35, hasRefrigerationUnit: false,
+          hasAdrEquipment: true, distanceToOriginKm: 6, daysSinceRefrigerationService: 0
+        },
+        {
+          id: 'K-STD', type: 'LARGE', maxCapacityKg: 18000, status: 'AVAILABLE',
+          location: 'Novi Sad', fuelPercent: 82, hasRefrigerationUnit: false,
+          hasAdrEquipment: false, distanceToOriginKm: 14, daysSinceRefrigerationService: 0
+        }
+      ],
+      drivers: [
+        {
+          id: 'D-ADR', available: true, workingHoursToday: 3, license: 'CE',
+          hasAdrLicense: true, fatigueLevel: 2, yearsOfExperience: 8, recentRouteIds: ['R-ADR']
+        },
+        {
+          id: 'D-JR', available: true, workingHoursToday: 5, license: 'CE',
+          hasAdrLicense: true, fatigueLevel: 5, yearsOfExperience: 1, recentRouteIds: []
+        }
+      ],
+      routes: [
+        {
+          id: 'R-ADR', roadType: 'REGIONAL', distanceKm: 105, estimatedTimeHours: 1.5,
+          maxCapacityKg: 24000, maxSpeedKmh: 80, hasTunnel: true
+        },
+        {
+          id: 'R-REG', roadType: 'REGIONAL', distanceKm: 55, estimatedTimeHours: 1,
+          maxCapacityKg: 24000, maxSpeedKmh: 90, hasTunnel: false
+        }
+      ]
     };
   }
 
