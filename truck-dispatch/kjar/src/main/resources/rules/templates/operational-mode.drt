@@ -1,0 +1,31 @@
+template header
+contextEnum
+contextLabel
+severityTag
+
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+
+global java.util.List messages;
+
+template "OperationalModeDelayAlert"
+
+// Auto-generated: delay threshold alert for @{contextLabel} context
+rule "ContextDelayAlert_@{contextEnum}"
+    salience 5
+    no-loop true
+    when
+        $ctx   : DispatchContext(context == OperationalContext.@{contextEnum})
+        $order : DeliveryOrder(status == OrderStatus.IN_PROGRESS,
+                               delayMin > $ctx.delayThresholdMin)
+    then
+        messages.add("[@{severityTag}] @{contextLabel}: order " + $order.getId()
+                + " delayed " + $order.getDelayMin() + "min"
+                + " (threshold=" + $ctx.getDelayThresholdMin() + "min)!");
+end
+
+end template

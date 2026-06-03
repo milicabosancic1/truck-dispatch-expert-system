@@ -6,7 +6,7 @@ import com.truckdispatch.truck_dispatch.model.OperationalContext;
 global java.util.List messages;
 
 // NIVO 0: Kontekstualizacija
-// salience 1000 â€” mora opaliti PRE svih validation/filtering pravila
+// salience 1000 - mora opaliti PRE svih validation/filtering pravila
 
 // JUTARNJI SPIC: 06:00-09:00, radni dan (pon=1 ... pet=5)
 rule "Context_MorningPeak"
@@ -22,7 +22,7 @@ rule "Context_MorningPeak"
         ctx.setFleetFactor(1.0);
         ctx.setDelayThresholdMin(45);
         insert(ctx);
-        messages.add("Morning peak active: LARGE trucks banned on regional routes");
+        messages.add("Morning peak active: LARGE trucks banned in city zones");
 end
 
 // VECERNJI SPIC: 17:00-20:00, radni dan

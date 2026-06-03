@@ -7,8 +7,8 @@ import com.truckdispatch.truck_dispatch.model.OrderStatus;
 
 global java.util.List messages;
 
-// BACKWARD CHAINING â€” Query 1: jeUzrokNedodele
-// Dijagnostika neuspeÅ¡nih dodela â€” rekurzivno traÅ¾i uzroke
+// BACKWARD CHAINING - Query 1: jeUzrokNedodele
+// Dijagnostika neuspesnih dodela - rekurzivno trazi uzroke
 
 query "jeUzrokNedodele" (String uzrok, String posledica)
     RejectionReason( cause == uzrok, effect == posledica )
@@ -17,14 +17,14 @@ query "jeUzrokNedodele" (String uzrok, String posledica)
       jeUzrokNedodele( $medjukorak, posledica; ) )
 end
 
-// Pravilo koje koristi BC query â€” dijagnostika zimskih uslova
+// Pravilo koje koristi BC query - dijagnostika zimskih uslova
 rule "BC_Diagnosis_Winter"
     salience 20
     when
         $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES || status == OrderStatus.UNFEASIBLE)
         jeUzrokNedodele( "ZimaRedukujNosivost", "NalogNedodeljen"; )
     then
-        messages.add("Order " + $order.getId() + " DIAGNOSIS: winter conditions reduced effective capacity â€” no truck available!");
+        messages.add("Order " + $order.getId() + " DIAGNOSIS: winter conditions reduced effective capacity - no truck available!");
 end
 
 // Pravilo koje vraca sve uzroke nedodele (unbound uzrok)
@@ -37,8 +37,8 @@ rule "BC_Diagnosis_AllCauses"
         messages.add("Order " + $order.getId() + " DIAGNOSIS cause: " + $uzrok);
 end
 
-// BACKWARD CHAINING â€” Query 2: pripadaKategorijiNaloga
-// Hijerarhija tipova naloga â€” rekurzivna klasifikacija
+// BACKWARD CHAINING - Query 2: pripadaKategorijiNaloga
+// Hijerarhija tipova naloga - rekurzivna klasifikacija
 
 query "pripadaKategorijiNaloga" (String stavka, String kategorija)
     OrderGroupMembership( item == stavka, group == kategorija )
@@ -47,12 +47,12 @@ query "pripadaKategorijiNaloga" (String stavka, String kategorija)
       pripadaKategorijiNaloga( $medjukat, kategorija; ) )
 end
 
-// Pravilo: specijalni nalog â€” proveri opremu kamiona
+// Pravilo: specijalni nalog - proveri opremu kamiona
 rule "BC_SpecialOrderCheck"
     salience 20
     when
         $order : DeliveryOrder(status == OrderStatus.VALID, $type : cargoType.name())
         pripadaKategorijiNaloga( $type, "NalogSpecijalni"; )
     then
-        messages.add("Order " + $order.getId() + " is SPECIAL (" + $type + ") â€” verify truck equipment!");
+        messages.add("Order " + $order.getId() + " is SPECIAL (" + $type + ") - verify truck equipment!");
 end

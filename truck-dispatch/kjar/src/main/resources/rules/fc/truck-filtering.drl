@@ -46,15 +46,15 @@ rule "CreateCandidateTruck_Winter"
         insert(new CandidateTruck($order, $truck));
 end
 
-rule "ExcludeLargeTruck_MorningPeak_Regional"
+rule "ExcludeLargeTruck_MorningPeak_City"
     salience 790
     when
         DispatchContext(context == OperationalContext.MORNING_PEAK)
-        $route : Route(roadType == RoadType.REGIONAL)
+        $route : Route(roadType == RoadType.CITY)
         $candidate : CandidateTruck(truck.type == TruckType.LARGE, order.routeId == $route.id)
     then
         retract($candidate);
-        messages.add("Truck " + $candidate.getTruck().getId() + " excluded - LARGE truck banned on regional routes during morning peak");
+        messages.add("Truck " + $candidate.getTruck().getId() + " excluded - LARGE truck banned in city zones during morning peak");
 end
 
 rule "ExcludeNoFrigoForRefrigerated"

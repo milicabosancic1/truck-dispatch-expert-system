@@ -37,7 +37,7 @@ rule "Score_BonusFamiliarRoute"
         modify($pair) { setScore($pair.getScore() + 20); }
 end
 
-// +15: visoka iskoriÅ¡Ä‡enost kamiona (teret > 90% nosivosti)
+// +15: visoka iskoriscenost kamiona (teret > 90% nosivosti)
 rule "Score_BonusHighUtilization"
     salience 600
     no-loop true
@@ -60,7 +60,7 @@ rule "Score_BonusContext_MorningSmall"
         modify($pair) { setScore($pair.getScore() + 15); }
 end
 
-// +10: nizak umor vozaÄa (umor <= 3)
+// +10: nizak umor vozaca (umor <= 3)
 rule "Score_BonusLowFatigue"
     salience 600
     no-loop true
@@ -83,7 +83,7 @@ rule "Score_MalusFuel"
         messages.add("Warning: truck " + $truck.getId() + " has < 40% fuel (score malus -25)");
 end
 
-// -30: visok umor vozaÄa (umor >= 6)
+// -30: visok umor vozaca (umor >= 6)
 rule "Score_MalusHighFatigue"
     salience 600
     no-loop true
@@ -94,7 +94,7 @@ rule "Score_MalusHighFatigue"
         modify($pair) { setScore($pair.getScore() - 30); }
 end
 
-// -35: ADR nalog + neiskusan vozaÄ (< 3 godine)
+// -35: ADR nalog + neiskusan vozac (< 3 godine)
 rule "Score_MalusADR_Inexperienced"
     salience 600
     no-loop true
@@ -104,7 +104,7 @@ rule "Score_MalusADR_Inexperienced"
         Driver(this == $driver, yearsOfExperience < 3)
     then
         modify($pair) { setScore($pair.getScore() - 35); }
-        messages.add("ADR order " + $order.getId() + " â€” driver " + $driver.getId() + " is inexperienced (malus -35)");
+        messages.add("ADR order " + $order.getId() + " - driver " + $driver.getId() + " is inexperienced (malus -35)");
 end
 
 // -20: zimski uslovi + duga ruta (> 200km)

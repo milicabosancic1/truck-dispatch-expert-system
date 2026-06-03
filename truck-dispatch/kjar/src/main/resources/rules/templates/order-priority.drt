@@ -1,0 +1,28 @@
+template header
+priorityEnum
+priorityLabel
+urgencyTag
+
+package rules;
+
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.OrderPriority;
+
+global java.util.List messages;
+
+template "OrderPriorityWaiting"
+
+// Auto-generated: alert when @{priorityLabel} order is waiting for resources
+rule "PriorityWaiting_@{priorityEnum}"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES,
+                               priority == OrderPriority.@{priorityEnum})
+    then
+        messages.add("[@{urgencyTag}] Order " + $order.getId()
+                + " (@{priorityLabel}) is waiting for resources!");
+end
+
+end template

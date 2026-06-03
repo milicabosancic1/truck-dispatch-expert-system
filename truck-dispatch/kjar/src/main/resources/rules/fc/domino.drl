@@ -13,9 +13,9 @@ import com.truckdispatch.truck_dispatch.model.OperationalContext;
 
 global java.util.List messages;
 
-// NIVO 5: Domino efekat kaÅ¡njenja
+// NIVO 5: Domino efekat kasnjenja
 
-// Detekcija primarnog kaÅ¡njenja â€” kamion kasni i blokira sledeÄ‡i nalog
+// Detekcija primarnog kasnjenja - kamion kasni i blokira sledeci nalog
 rule "Domino_DetectPrimary"
     salience 30
     when
@@ -30,7 +30,7 @@ rule "Domino_DetectPrimary"
                 + " (+" + $n1.getDelayMin() + "min)");
 end
 
-// Propagacija kaÅ¡njenja kroz lanac
+// Propagacija kasnjenja kroz lanac
 rule "Domino_PropagateChain"
     salience 30
     when
@@ -43,7 +43,7 @@ rule "Domino_PropagateChain"
         messages.add("DOMINO chain: order " + $n3.getId() + " affected (+" + $delay + "min)");
 end
 
-// Replaniranje hitnog naloga zahvacenog domino efektom â€” visok prioritet
+// Replaniranje hitnog naloga zahvacenog domino efektom - visok prioritet
 rule "Domino_ReplannUrgentOrder"
     salience 200
     no-loop true
@@ -78,7 +78,7 @@ rule "Domino_Escalation"
         messages.add("ESCALATION TO MANAGER: truck " + $truckId + " caused domino on " + $count + " orders!");
 end
 
-// NoÄ‡ni reÅ¾im: odloÅ¾i zahvaÄ‡eni nalog ako nije hitan
+// Nocni rezim: odlozi zahvaceni nalog ako nije hitan
 rule "Domino_NightMode_Postpone"
     salience 30
     when
