@@ -7,52 +7,52 @@ import com.truckdispatch.truck_dispatch.model.OrderStatus;
 
 global java.util.List messages;
 
-// BACKWARD CHAINING - Query 1: jeUzrokNedodele
-// Dijagnostika neuspesnih dodela - rekurzivno trazi uzroke
+// BACKWARD CHAINING - Query 1: isCauseOfRejection
+// Diagnoses why an order was not assigned -- recursively traces the cause chain
 
-query "jeUzrokNedodele" (String uzrok, String posledica)
-    RejectionReason( cause == uzrok, effect == posledica )
+query "isCauseOfRejection" (String cause, String effect)
+    RejectionReason( cause == cause, effect == effect )
     or
-    ( RejectionReason( cause == uzrok, $medjukorak : effect ) and
-      jeUzrokNedodele( $medjukorak, posledica; ) )
+    ( RejectionReason( cause == cause, $intermediate : effect ) and
+      isCauseOfRejection( $intermediate, effect; ) )
 end
 
-// Pravilo koje koristi BC query - dijagnostika zimskih uslova
+// Rule: diagnose winter capacity reduction as root cause
 rule "BC_Diagnosis_Winter"
     salience 20
     when
         $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES || status == OrderStatus.UNFEASIBLE)
-        jeUzrokNedodele( "ZimaRedukujNosivost", "NalogNedodeljen"; )
+        isCauseOfRejection( "WinterReducesCapacity", "OrderUnassigned"; )
     then
         messages.add("Order " + $order.getId() + " DIAGNOSIS: winter conditions reduced effective capacity - no truck available!");
 end
 
-// Pravilo koje vraca sve uzroke nedodele (unbound uzrok)
+// Rule: report all root causes of rejection (unbound cause)
 rule "BC_Diagnosis_AllCauses"
     salience 20
     when
         $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES || status == OrderStatus.UNFEASIBLE)
-        jeUzrokNedodele( $uzrok, "NalogNedodeljen"; )
+        isCauseOfRejection( $cause, "OrderUnassigned"; )
     then
-        messages.add("Order " + $order.getId() + " DIAGNOSIS cause: " + $uzrok);
+        messages.add("Order " + $order.getId() + " DIAGNOSIS cause: " + $cause);
 end
 
-// BACKWARD CHAINING - Query 2: pripadaKategorijiNaloga
-// Hijerarhija tipova naloga - rekurzivna klasifikacija
+// BACKWARD CHAINING - Query 2: belongsToOrderCategory
+// Order type hierarchy -- recursive classification
 
-query "pripadaKategorijiNaloga" (String stavka, String kategorija)
-    OrderGroupMembership( item == stavka, group == kategorija )
+query "belongsToOrderCategory" (String item, String category)
+    OrderGroupMembership( item == item, group == category )
     or
-    ( OrderGroupMembership( item == stavka, $medjukat : group ) and
-      pripadaKategorijiNaloga( $medjukat, kategorija; ) )
+    ( OrderGroupMembership( item == item, $midCategory : group ) and
+      belongsToOrderCategory( $midCategory, category; ) )
 end
 
-// Pravilo: specijalni nalog - proveri opremu kamiona
+// Rule: special order detected -- verify truck equipment
 rule "BC_SpecialOrderCheck"
     salience 20
     when
         $order : DeliveryOrder(status == OrderStatus.ASSIGNED, $type : cargoType.name())
-        pripadaKategorijiNaloga( $type, "NalogSpecijalni"; )
+        belongsToOrderCategory( $type, "SpecialOrder"; )
     then
         messages.add("Order " + $order.getId() + " is SPECIAL (" + $type + ") - verify truck equipment!");
 end

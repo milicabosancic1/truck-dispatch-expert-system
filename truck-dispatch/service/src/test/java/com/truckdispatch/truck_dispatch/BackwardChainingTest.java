@@ -75,16 +75,16 @@ class BackwardChainingTest {
                 .filter(o -> o.getId().equals(id)).findFirst().orElseThrow();
     }
 
-    // ---- Query 1: jeUzrokNedodele ----
+    // ---- Query 1: isCauseOfRejection ----
 
     @Nested
-    @DisplayName("jeUzrokNedodele — recursive diagnosis chain")
-    class JeUzrokNedodele {
+    @DisplayName("isCauseOfRejection — recursive diagnosis chain")
+    class IsCauseOfRejection {
 
         @Test
         @DisplayName("BC_Diagnosis_Winter fires for UNFEASIBLE order — resolves 3-hop chain")
         void diagnosisWinterFires() {
-            // ZimaRedukujNosivost→NemaDovoljneNosivosti→NemaSlobodnogKamiona→NalogNedodeljen (3 hops)
+            // WinterReducesCapacity→InsufficientCapacity→NoTruckAvailable→OrderUnassigned (3 hops)
             // Truck capacity 1000kg, order needs 5000kg → UNFEASIBLE
             Truck  t = truck("T1", TruckType.SMALL, 1000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
@@ -101,7 +101,7 @@ class BackwardChainingTest {
         @Test
         @DisplayName("BC_Diagnosis_AllCauses reports root causes at all chain depths for UNFEASIBLE order")
         void diagnosisAllCausesRecursiveChains() {
-            // Every node that transitively reaches NalogNedodeljen is reported.
+            // Every node that transitively reaches OrderUnassigned is reported.
             // This verifies the recursive query resolves chains at depth 1, 2 and 3.
             Truck  t = truck("T1", TruckType.SMALL, 1000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
@@ -111,13 +111,13 @@ class BackwardChainingTest {
                             List.of(order("O1", "R1", 5000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
             // 3-hop leaf nodes (recursion required):
-            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: ZimaRedukujNosivost"));
-            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: TeretPremasen"));
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: WinterReducesCapacity"));
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: CargoOverweight"));
             // 2-hop leaf nodes:
-            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: SviVozaciUmorni"));
-            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: GradskiKamionVeliki"));
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: AllDriversFatigued"));
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: LargeTruckInCity"));
             // 1-hop intermediate nodes also reported:
-            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: NemaSlobodnogKamiona"));
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("DIAGNOSIS cause: NoTruckAvailable"));
         }
 
         @Test
@@ -151,14 +151,14 @@ class BackwardChainingTest {
         }
     }
 
-    // ---- Query 2: pripadaKategorijiNaloga ----
+    // ---- Query 2: belongsToOrderCategory ----
 
     @Nested
-    @DisplayName("pripadaKategorijiNaloga — order group hierarchy")
-    class PripadaKategorijiNaloga {
+    @DisplayName("belongsToOrderCategory — order group hierarchy")
+    class BelongsToOrderCategory {
 
         @Test
-        @DisplayName("RASHLADNI triggers BC_SpecialOrderCheck — direct NalogSpecijalni membership")
+        @DisplayName("REFRIGERATED triggers BC_SpecialOrderCheck — direct SpecialOrder membership")
         void rashladniIsSpecial() {
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, true, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
@@ -172,7 +172,7 @@ class BackwardChainingTest {
         }
 
         @Test
-        @DisplayName("OPASNA_ROBA triggers BC_SpecialOrderCheck — direct NalogSpecijalni membership")
+        @DisplayName("HAZARDOUS triggers BC_SpecialOrderCheck — direct SpecialOrder membership")
         void opasnaRobaIsSpecial() {
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, true, 80, 5);
             Driver d = driver("D1", true, 1, "CE", true, 1, 5);
@@ -186,9 +186,9 @@ class BackwardChainingTest {
         }
 
         @Test
-        @DisplayName("STANDARDNO does NOT trigger BC_SpecialOrderCheck — belongs to NalogKomercijalni, not NalogSpecijalni")
-        void standardnoIsNotSpecial() {
-            // STANDARDNO→DostavaStandardna→NalogKomercijalni→NalogOpsti — never reaches NalogSpecijalni
+        @DisplayName("STANDARD does NOT trigger BC_SpecialOrderCheck — belongs to CommercialOrder, not SpecialOrder")
+        void standardIsNotSpecial() {
+            // STANDARD→StandardDelivery→CommercialOrder→GeneralOrder — never reaches SpecialOrder
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
@@ -201,10 +201,10 @@ class BackwardChainingTest {
         }
 
         @Test
-        @DisplayName("RASHLADNI UNFEASIBLE does NOT trigger BC_SpecialOrderCheck — order never reaches VALID")
-        void rashladniUnfeasibleSkipsSpecialCheck() {
-            // No frigo truck → RASHLADNI goes UNFEASIBLE, never hits VALID status
-            // BC_SpecialOrderCheck requires status == VALID, so it must not fire here
+        @DisplayName("REFRIGERATED UNFEASIBLE does NOT trigger BC_SpecialOrderCheck — order never reaches ASSIGNED")
+        void refrigeratedUnfeasibleSkipsSpecialCheck() {
+            // No frigo truck → REFRIGERATED goes UNFEASIBLE, never hits ASSIGNED status
+            // BC_SpecialOrderCheck requires status == ASSIGNED, so it must not fire here
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);

@@ -60,34 +60,34 @@ public class DispatchService {
 
     // Backward chaining fact tables 
     private void insertRejectionReasons(KieSession session) {
-        session.insert(new RejectionReason("NemaSlobodnogKamiona",       "NalogNedodeljen"));
-        session.insert(new RejectionReason("NemaDovoljneNosivosti",      "NemaSlobodnogKamiona"));
-        session.insert(new RejectionReason("SviKamioniZauzeti",          "NemaSlobodnogKamiona"));
-        session.insert(new RejectionReason("NemaDostupnogVozaca",        "NalogNedodeljen"));
-        session.insert(new RejectionReason("SviVozaciPrekoraciliSate",   "NemaDostupnogVozaca"));
-        session.insert(new RejectionReason("SviVozaciUmorni",            "NemaDostupnogVozaca"));
-        session.insert(new RejectionReason("NemaLicenceZaTipKamiona",    "NemaDostupnogVozaca"));
-        session.insert(new RejectionReason("NemaADRLicence",             "NemaDostupnogVozaca"));
-        session.insert(new RejectionReason("RutaZabranjenaTipu",         "NalogNedodeljen"));
-        session.insert(new RejectionReason("GradskiKamionVeliki",        "RutaZabranjenaTipu"));
-        session.insert(new RejectionReason("MostOgranicenaNosivost",     "RutaZabranjenaTipu"));
-        session.insert(new RejectionReason("TeretPremasen",              "NemaDovoljneNosivosti"));
-        session.insert(new RejectionReason("ZimaRedukujNosivost",        "NemaDovoljneNosivosti"));
+        session.insert(new RejectionReason("NoTruckAvailable",       "OrderUnassigned"));
+        session.insert(new RejectionReason("InsufficientCapacity",   "NoTruckAvailable"));
+        session.insert(new RejectionReason("AllTrucksBusy",          "NoTruckAvailable"));
+        session.insert(new RejectionReason("NoDriverAvailable",      "OrderUnassigned"));
+        session.insert(new RejectionReason("AllDriversOverHours",    "NoDriverAvailable"));
+        session.insert(new RejectionReason("AllDriversFatigued",     "NoDriverAvailable"));
+        session.insert(new RejectionReason("NoLicenseForTruckType",  "NoDriverAvailable"));
+        session.insert(new RejectionReason("NoAdrLicense",           "NoDriverAvailable"));
+        session.insert(new RejectionReason("RouteRestrictedForType", "OrderUnassigned"));
+        session.insert(new RejectionReason("LargeTruckInCity",       "RouteRestrictedForType"));
+        session.insert(new RejectionReason("BridgeCapacityExceeded", "RouteRestrictedForType"));
+        session.insert(new RejectionReason("CargoOverweight",        "InsufficientCapacity"));
+        session.insert(new RejectionReason("WinterReducesCapacity",  "InsufficientCapacity"));
     }
 
     private void insertOrderGroupMemberships(KieSession session) {
-        session.insert(new OrderGroupMembership("DostavaMaloprodaja",    "DostavaStandardna"));
-        session.insert(new OrderGroupMembership("DostavaVeleprodaja",    "DostavaStandardna"));
-        session.insert(new OrderGroupMembership("DostavaStandardna",     "NalogKomercijalni"));
-        session.insert(new OrderGroupMembership("DostavaHitna",          "NalogKomercijalni"));
-        session.insert(new OrderGroupMembership("DostavaFrigoriferska",  "NalogSpecijalni"));
-        session.insert(new OrderGroupMembership("DostavaOpasnaRoba",     "NalogSpecijalni"));
-        session.insert(new OrderGroupMembership("NalogKomercijalni",     "NalogOpsti"));
-        session.insert(new OrderGroupMembership("NalogSpecijalni",       "NalogOpsti"));
+        session.insert(new OrderGroupMembership("RetailDelivery",       "StandardDelivery"));
+        session.insert(new OrderGroupMembership("WholesaleDelivery",    "StandardDelivery"));
+        session.insert(new OrderGroupMembership("StandardDelivery",     "CommercialOrder"));
+        session.insert(new OrderGroupMembership("UrgentDelivery",       "CommercialOrder"));
+        session.insert(new OrderGroupMembership("RefrigeratedDelivery", "SpecialOrder"));
+        session.insert(new OrderGroupMembership("HazardousDelivery",    "SpecialOrder"));
+        session.insert(new OrderGroupMembership("CommercialOrder",      "GeneralOrder"));
+        session.insert(new OrderGroupMembership("SpecialOrder",         "GeneralOrder"));
         // Map cargo type names to group hierarchy
-        session.insert(new OrderGroupMembership("REFRIGERATED",             "NalogSpecijalni"));
-        session.insert(new OrderGroupMembership("HAZARDOUS",           "NalogSpecijalni"));
-        session.insert(new OrderGroupMembership("STANDARD",            "DostavaStandardna"));
+        session.insert(new OrderGroupMembership("REFRIGERATED", "SpecialOrder"));
+        session.insert(new OrderGroupMembership("HAZARDOUS",    "SpecialOrder"));
+        session.insert(new OrderGroupMembership("STANDARD",     "StandardDelivery"));
     }
 
     // Collect results from working memory
