@@ -555,6 +555,25 @@ class ForwardChainingTest {
         }
 
         @Test
+        @DisplayName("LOMLJIVO malus (-20): fragile cargo on fast route reduces score")
+        void lomljivoMalusOnFastRoute() {
+            // distance=15km (no proximity bonus), fatigue=4 (no fatigue bonus/malus)
+            // LOMLJIVO + HIGHWAY maxSpeedKmh=120 > 80 → score = 100 + 10 (MEDIUM+HIGHWAY template) - 20 = 90
+            Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 15);
+            Driver d = driver("D1", true, 1, "CE", false, 4, 5);
+            Route  r = new Route();
+            r.setId("R1"); r.setRoadType(RoadType.HIGHWAY); r.setDistanceKm(100);
+            r.setMaxSpeedKmh(120); r.setHasTunnel(false);
+            r.setEstimatedTimeHours(100.0 / 120); r.setMaxCapacityKg(24000);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 10, 3, List.of(t), List.of(d), List.of(r),
+                            List.of(order("O1", "R1", 1000, CargoType.LOMLJIVO, 300, OrderPriority.NORMAL))));
+
+            assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("score=90"));
+        }
+
+        @Test
         @DisplayName("Template bonus: SMALL truck on CITY route gets score bonus")
         void templateBonusSmallOnCity() {
             Truck tSmall  = truck("TS", TruckType.SMALL, 2000, TruckStatus.AVAILABLE, false, false, 80, 15);
@@ -700,6 +719,51 @@ class ForwardChainingTest {
             long assigned = res.getProcessedOrders().stream()
                     .filter(o -> o.getStatus() == OrderStatus.ASSIGNED).count();
             assertThat(assigned).isEqualTo(1);
+        }
+    }
+
+    // Template-generated rules
+
+    @Nested
+    @DisplayName("Template-generated rules")
+    class TemplateRules {
+
+        @Test
+        @DisplayName("order-priority template: PriorityWaiting fires for HIGH order in WAITING_RESOURCES")
+        void priorityWaitingHighOrder() {
+            // Night mode + HIGH priority → order goes WAITING_RESOURCES
+            // PriorityWaiting_HIGH template rule must add [WARN] alert message
+            Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
+            Driver d = driver("D1", true, 1, "CE", false, 1, 5);
+            Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(10, 23, 3, List.of(t), List.of(d), List.of(r),
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARDNO, 300, OrderPriority.HIGH))));
+
+            assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
+            assertThat(res.getMessages())
+                    .anyMatch(m -> m.contains("[WARN]") && m.contains("O1") && m.contains("waiting for resources"));
+        }
+
+        @Test
+        @DisplayName("operational-mode template: ContextDelayAlert fires for evening-peak order exceeding delay threshold")
+        void contextDelayAlertEveningPeak() {
+            // Evening peak (hour=18) → DispatchContext with delayThresholdMin=40
+            // Pre-set IN_PROGRESS order with delayMin=45 > 40 → alert fires
+            DeliveryOrder o = new DeliveryOrder();
+            o.setId("O1"); o.setRouteId("R1"); o.setWeightKg(1000);
+            o.setCargoType(CargoType.STANDARDNO); o.setDeliveryDeadlineMin(300);
+            o.setPriority(OrderPriority.NORMAL); o.setStatus(OrderStatus.IN_PROGRESS);
+            o.setDestination("Beograd"); o.setDelayMin(45);
+            o.setAssignedTruckId("T1");
+
+            Truck t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.BUSY, false, false, 80, 5);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 18, 3, List.of(t), List.of(), List.of(), List.of(o)));
+
+            assertThat(res.getMessages())
+                    .anyMatch(m -> m.contains("[WARN]") && m.contains("Evening Peak")
+                               && m.contains("O1") && m.contains("45"));
         }
     }
 }
