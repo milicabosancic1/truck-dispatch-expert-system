@@ -15,13 +15,13 @@ global java.util.List messages;
 
 // NIVO 5: Domino efekat kasnjenja
 
-// Detekcija primarnog kasnjenja - kamion kasni i blokira sledeci nalog
+// Detekcija primarnog kasnjenja - kamion kasni i blokira sledeci nalog u redu
 rule "Domino_DetectPrimary"
     salience 30
     when
         $n1 : DeliveryOrder(status == OrderStatus.IN_PROGRESS, delayMin > 0,
                             $truckId : assignedTruckId)
-        $n2 : DeliveryOrder(status == OrderStatus.WAITING_UNLOADING,
+        $n2 : DeliveryOrder(status == OrderStatus.ASSIGNED,
                             assignedTruckId == $truckId, this != $n1)
         not DelayPropagation(primary == $n1, affected == $n2)
     then
@@ -35,7 +35,7 @@ rule "Domino_PropagateChain"
     salience 30
     when
         $dp : DelayPropagation($n2 : affected, $delay : delayMin)
-        $n3 : DeliveryOrder(status == OrderStatus.WAITING_UNLOADING,
+        $n3 : DeliveryOrder(status == OrderStatus.ASSIGNED,
                             assignedTruckId == $n2.assignedTruckId, this != $n2)
         not DelayPropagation(affected == $n3)
     then

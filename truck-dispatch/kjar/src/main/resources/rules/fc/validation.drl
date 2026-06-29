@@ -41,10 +41,22 @@ rule "Validation_Infeasible_Normal"
     when
         $order : DeliveryOrder(status == OrderStatus.NEW)
         not DispatchContext(context == OperationalContext.WINTER_CONDITIONS)
-        not (exists Truck(status == TruckStatus.AVAILABLE, maxCapacityKg >= $order.weightKg))
+        not Truck(maxCapacityKg >= $order.weightKg)
     then
         modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
-        messages.add("Order " + $order.getId() + " is UNFEASIBLE — no truck with enough capacity. Consider subcontractor.");
+        messages.add("Order " + $order.getId() + " is UNFEASIBLE — no truck in fleet with enough capacity. Consider subcontractor.");
+end
+
+rule "Validation_BusyTrucks_Normal"
+    salience 900
+    when
+        $order : DeliveryOrder(status == OrderStatus.NEW)
+        not DispatchContext(context == OperationalContext.WINTER_CONDITIONS)
+        exists Truck(maxCapacityKg >= $order.weightKg)
+        not Truck(status == TruckStatus.AVAILABLE, maxCapacityKg >= $order.weightKg)
+    then
+        modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
+        messages.add("Order " + $order.getId() + " waiting — all trucks with sufficient capacity are currently busy.");
 end
 
 rule "Validation_Infeasible_Winter"
@@ -52,10 +64,22 @@ rule "Validation_Infeasible_Winter"
     when
         $order : DeliveryOrder(status == OrderStatus.NEW)
         $ctx : DispatchContext(context == OperationalContext.WINTER_CONDITIONS, $factor : capacityFactor)
-        not (exists Truck(status == TruckStatus.AVAILABLE, maxCapacityKg * $factor >= $order.weightKg))
+        not Truck(maxCapacityKg * $factor >= $order.weightKg)
     then
         modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
         messages.add("Order " + $order.getId() + " is UNFEASIBLE — winter conditions reduce effective capacity below " + $order.getWeightKg() + "kg");
+end
+
+rule "Validation_BusyTrucks_Winter"
+    salience 900
+    when
+        $order : DeliveryOrder(status == OrderStatus.NEW)
+        $ctx : DispatchContext(context == OperationalContext.WINTER_CONDITIONS, $factor : capacityFactor)
+        exists Truck(maxCapacityKg * $factor >= $order.weightKg)
+        not Truck(status == TruckStatus.AVAILABLE, maxCapacityKg * $factor >= $order.weightKg)
+    then
+        modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
+        messages.add("Order " + $order.getId() + " waiting — all trucks with sufficient capacity are currently busy (winter conditions).");
 end
 
 rule "Validation_UrgentOrder"
@@ -93,6 +117,7 @@ rule "CargoType_NightMode_OnlyUrgent"
     when
         $order : DeliveryOrder(status == OrderStatus.VALID, priority != OrderPriority.URGENT, priority != OrderPriority.CRITICAL_DELIVERY)
         DispatchContext(context == OperationalContext.NIGHT_MODE)
+        not DispatchContext(context == OperationalContext.WEEKEND)
     then
         modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
         messages.add("Night mode: order " + $order.getId() + " postponed — only URGENT orders allowed at night");

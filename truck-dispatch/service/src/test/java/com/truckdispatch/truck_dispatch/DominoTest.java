@@ -42,12 +42,12 @@ class DominoTest {
         return o;
     }
 
-    // WAITING_UNLOADING order — blocked by the same truck
+    // ASSIGNED order — next in queue for the same truck, will be delayed by truck's current delivery
     private DeliveryOrder waiting(String id, String truckId, OrderPriority priority, double weightKg) {
         DeliveryOrder o = new DeliveryOrder();
         o.setId(id); o.setRouteId("R1"); o.setWeightKg(weightKg);
         o.setCargoType(CargoType.STANDARD); o.setDeliveryDeadlineMin(300);
-        o.setPriority(priority); o.setStatus(OrderStatus.WAITING_UNLOADING);
+        o.setPriority(priority); o.setStatus(OrderStatus.ASSIGNED);
         o.setDestination("Beograd");
         o.setAssignedTruckId(truckId);
         return o;

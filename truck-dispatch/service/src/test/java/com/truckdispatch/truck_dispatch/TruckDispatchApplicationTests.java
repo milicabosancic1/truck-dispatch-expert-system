@@ -327,9 +327,9 @@ class TruckDispatchApplicationTests {
         n105.setAssignedTruckId("K-07");
         n105.setDelayMin(25);
 
-        // Order waiting for same truck to unload
+        // Order assigned to same truck — next in queue, will be delayed
         DeliveryOrder n106 = makeOrder("106", "R-07", 1500, CargoType.STANDARD, 90, OrderPriority.NORMAL);
-        n106.setStatus(OrderStatus.WAITING_UNLOADING);
+        n106.setStatus(OrderStatus.ASSIGNED);
         n106.setAssignedTruckId("K-07");
 
         DispatchRequest req = new DispatchRequest();

@@ -288,6 +288,33 @@ class ForwardChainingTest {
         }
 
         @Test
+        @DisplayName("WAITING_RESOURCES when truck has capacity but is already busy at dispatch time")
+        void waitingResourcesWhenTruckBusy() {
+            Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.BUSY, false, false, 80, 5);
+            Driver d = driver("D1", true, 1, "CE", false, 1, 5);
+            Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 10, 3, List.of(t), List.of(d), List.of(r),
+                            List.of(order("O1", "R1", 3000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
+
+            assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
+            assertThat(find(res, "O1").getStatus()).isNotEqualTo(OrderStatus.UNFEASIBLE);
+        }
+
+        @Test
+        @DisplayName("Weekend night: HIGH priority order dispatched — weekend rule overrides night restriction")
+        void weekendNightAllowsHigh() {
+            Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
+            Driver d = driver("D1", true, 1, "CE", false, 1, 5);
+            Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 22, 6, List.of(t), List.of(d), List.of(r),  // Saturday 22h
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.HIGH))));
+
+            assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
+        }
+
+        @Test
         @DisplayName("ADR order on tunnel route triggers warning message")
         void adrTunnelRouteWarning() {
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, true, 80, 5);
