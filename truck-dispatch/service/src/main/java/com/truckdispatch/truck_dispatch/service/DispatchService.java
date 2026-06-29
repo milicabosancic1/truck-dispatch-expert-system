@@ -15,13 +15,23 @@ import java.util.List;
 @Service
 public class DispatchService {
 
-    private final KieContainer kieContainer;
+    private final KieContainer       kieContainer;
+    private final FleetStateService  fleetState;
 
-    public DispatchService(KieContainer kieContainer) {
+    public DispatchService(KieContainer kieContainer, FleetStateService fleetState) {
         this.kieContainer = kieContainer;
+        this.fleetState   = fleetState;
     }
 
     public DispatchResult processDispatch(DispatchRequest request) {
+        // Register any fleet resources provided in the request (first call bootstraps the store;
+        // subsequent calls with empty lists leave the stored state untouched).
+        // When the request provides a fleet list it represents the full current configuration —
+        // replace the stored state so stale entries from a previous configuration don't linger.
+        if (!request.getTrucks().isEmpty())  fleetState.replaceTrucks(request.getTrucks());
+        if (!request.getDrivers().isEmpty()) fleetState.replaceDrivers(request.getDrivers());
+        if (!request.getRoutes().isEmpty())  fleetState.replaceRoutes(request.getRoutes());
+
         KieSession session = kieContainer.newKieSession("TruckDispatchSession");
         List<String> messages = new ArrayList<>();
 
@@ -37,42 +47,34 @@ public class DispatchService {
             session.insert(Long.valueOf(dayOfWeek));
             session.insert(request.getTemperature());
 
-            // Domain facts
-            request.getRoutes().forEach(session::insert);
-            request.getTrucks().forEach(session::insert);
-            request.getDrivers().forEach(session::insert);
+            // Fleet state comes from the store (may include CEP-updated truck statuses).
+            // If the store was just populated above from the request, behaviour is identical to before.
+            fleetState.getTrucks().forEach(session::insert);
+            fleetState.getDrivers().forEach(session::insert);
+            fleetState.getRoutes().forEach(session::insert);
+
+            // Orders come from the request — FC only dispatches newly submitted orders.
             request.getOrders().forEach(session::insert);
 
-            // Backward chaining facts — RejectionReason hierarchy
-            insertRejectionReasons(session);
-
-            // Backward chaining facts — OrderGroupMembership hierarchy
             insertOrderGroupMemberships(session);
 
             session.fireAllRules();
 
-            return buildResult(session, messages);
+            DispatchResult result = buildResult(session, messages);
+
+            // Write updated truck/driver statuses and newly assigned orders back to the store
+            // so that: (a) next dispatch sees current availability, (b) CEP gets fresh state.
+            session.getObjects().forEach(obj -> {
+                if (obj instanceof Truck t)          fleetState.upsertTruck(t);
+                else if (obj instanceof Driver d)    fleetState.upsertDriver(d);
+                else if (obj instanceof DeliveryOrder o) fleetState.upsertOrder(o);
+            });
+
+            return result;
 
         } finally {
             session.dispose();
         }
-    }
-
-    // Backward chaining fact tables 
-    private void insertRejectionReasons(KieSession session) {
-        session.insert(new RejectionReason("NoTruckAvailable",       "OrderUnassigned"));
-        session.insert(new RejectionReason("InsufficientCapacity",   "NoTruckAvailable"));
-        session.insert(new RejectionReason("AllTrucksBusy",          "NoTruckAvailable"));
-        session.insert(new RejectionReason("NoDriverAvailable",      "OrderUnassigned"));
-        session.insert(new RejectionReason("AllDriversOverHours",    "NoDriverAvailable"));
-        session.insert(new RejectionReason("AllDriversFatigued",     "NoDriverAvailable"));
-        session.insert(new RejectionReason("NoLicenseForTruckType",  "NoDriverAvailable"));
-        session.insert(new RejectionReason("NoAdrLicense",           "NoDriverAvailable"));
-        session.insert(new RejectionReason("RouteRestrictedForType", "OrderUnassigned"));
-        session.insert(new RejectionReason("LargeTruckInCity",       "RouteRestrictedForType"));
-        session.insert(new RejectionReason("BridgeCapacityExceeded", "RouteRestrictedForType"));
-        session.insert(new RejectionReason("CargoOverweight",        "InsufficientCapacity"));
-        session.insert(new RejectionReason("WinterReducesCapacity",  "InsufficientCapacity"));
     }
 
     private void insertOrderGroupMemberships(KieSession session) {
@@ -84,13 +86,10 @@ public class DispatchService {
         session.insert(new OrderGroupMembership("HazardousDelivery",    "SpecialOrder"));
         session.insert(new OrderGroupMembership("CommercialOrder",      "GeneralOrder"));
         session.insert(new OrderGroupMembership("SpecialOrder",         "GeneralOrder"));
-        // Map cargo type names to group hierarchy
         session.insert(new OrderGroupMembership("REFRIGERATED", "SpecialOrder"));
         session.insert(new OrderGroupMembership("HAZARDOUS",    "SpecialOrder"));
         session.insert(new OrderGroupMembership("STANDARD",     "StandardDelivery"));
     }
-
-    // Collect results from working memory
 
     private DispatchResult buildResult(KieSession session, List<String> messages) {
         DispatchResult result = new DispatchResult();

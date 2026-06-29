@@ -20,35 +20,36 @@ import java.util.Map;
  * CEP service — maintains a long-lived stateful KieSession in stream mode.
  * FleetEvent objects are inserted as they arrive (real-time).
  * Fleet state (trucks, orders) is synced after each dispatch so that
- * CEP_BreakdownDuringOrder and similar cross-session rules can fire.
+ * CEP_BreakdownDuringOrder and lifecycle rules can fire.
+ * After each event, modified truck/order state is written back to FleetStateService
+ * so the next FC dispatch sees up-to-date availability.
  */
 @Service
 public class CepService {
 
-    private final KieSession cepSession;
-    private final List<String> messages = new ArrayList<>();
+    private final KieSession       cepSession;
+    private final FleetStateService fleetState;
+    private final List<String>     messages = new ArrayList<>();
 
-    // Track fact handles so we can retract and re-insert on next dispatch
     private final Map<String, FactHandle> truckHandles = new HashMap<>();
     private final Map<String, FactHandle> orderHandles = new HashMap<>();
 
-    public CepService(KieContainer kieContainer) {
+    public CepService(KieContainer kieContainer, FleetStateService fleetState) {
         this.cepSession = kieContainer.newKieSession("TruckDispatchCEPSession");
         this.cepSession.setGlobal("messages", messages);
+        this.fleetState = fleetState;
     }
 
     /**
      * Called after each successful dispatch so CEP rules have access to
-     * current truck and order state (needed for CEP_BreakdownDuringOrder).
+     * current truck and order state.
      */
     public void syncFleetState(List<Truck> trucks, List<DeliveryOrder> orders) {
-        // Retract stale facts
         truckHandles.values().forEach(cepSession::delete);
         truckHandles.clear();
         orderHandles.values().forEach(cepSession::delete);
         orderHandles.clear();
 
-        // Insert fresh state
         for (Truck t : trucks) {
             FactHandle fh = cepSession.insert(t);
             truckHandles.put(t.getId(), fh);
@@ -64,6 +65,9 @@ public class CepService {
         messages.clear();
         cepSession.insert(event);
         cepSession.fireAllRules();
+        // Propagate any truck/order changes (lifecycle rules, breakdown replanning)
+        // back to the shared state store so the next FC dispatch sees them.
+        syncModifiedStateToStore();
         return new ArrayList<>(messages);
     }
 
@@ -77,6 +81,13 @@ public class CepService {
             }
         }
         return alarms;
+    }
+
+    private void syncModifiedStateToStore() {
+        cepSession.getObjects().forEach(obj -> {
+            if (obj instanceof Truck t)               fleetState.upsertTruck(t);
+            else if (obj instanceof DeliveryOrder o)  fleetState.upsertOrder(o);
+        });
     }
 
     @PreDestroy
