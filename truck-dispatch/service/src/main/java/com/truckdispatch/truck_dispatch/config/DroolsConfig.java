@@ -30,7 +30,8 @@ public class DroolsConfig {
         "rules/fc/domino.drl",
         "rules/accumulate/accumulate.drl",
         "rules/bc/backward-chaining.drl",
-        "rules/cep/cep.drl"
+        "rules/cep/cep.drl",
+        "rules/cep/lifecycle.drl"
     };
 
     // Tip kamiona × tip rute → score bonus (generisano iz template-a)

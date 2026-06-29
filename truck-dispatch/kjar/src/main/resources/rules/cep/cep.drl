@@ -9,6 +9,9 @@ import com.truckdispatch.truck_dispatch.model.AlarmType;
 import com.truckdispatch.truck_dispatch.model.OrderStatus;
 import com.truckdispatch.truck_dispatch.model.TruckStatus;
 
+// Temporalni patterni nad event streamom (Drools Fusion / CEP).
+// Lifecycle tranzicije naloga su u lifecycle.drl (isti kbase, ista sesija).
+
 global java.util.List messages;
 
 // Deklarisanje FleetEvent kao CEP dogadjaj (umjesto Java anotacija)
@@ -28,14 +31,14 @@ rule "CEP_DelayEscalation"
         $e2 : FleetEvent(type == FleetEventType.DELAY, entityId == $truckId,
                          this != $e1, this after[1ms, 30m] $e1)
         $e3 : FleetEvent(type == FleetEventType.DELAY, entityId == $truckId,
-                         this != $e1, this != $e2, this after[1ms, 30m] $e2)
+                         this != $e1, this != $e2, this after[1ms, 30m] $e1)
     then
         insert(new Alarm(AlarmType.ESCALATION, $truckId,
                 "3 delays in 30 min - priority redistribution!", 3));
         messages.add("CEP ALERT: 3 delays for truck " + $truckId + " in 30min - redistribute priorities!");
 end
 
-// 2. Kamion na istoj GPS lokaciji > 20 minuta -> stoji
+// 2. Kamion na istoj GPS lokaciji > 20 minuta tokom aktivne dostave -> stoji
 rule "CEP_VehicleStopped"
     when
         $e1 : FleetEvent(type == FleetEventType.POSITION, $truckId : entityId, $loc : location)
@@ -43,6 +46,8 @@ rule "CEP_VehicleStopped"
                          location == $loc, this != $e1, this after[20m, *] $e1)
         not  FleetEvent(type == FleetEventType.POSITION, entityId == $truckId,
                          location != $loc, this after $e1, this before $e2)
+        exists DeliveryOrder(status == OrderStatus.IN_PROGRESS, assignedTruckId == $truckId)
+        not   DeliveryOrder(status == OrderStatus.WAITING_UNLOADING, assignedTruckId == $truckId)
     then
         insert(new Alarm(AlarmType.VEHICLE_STOPPED, $truckId,
                 "Truck " + $truckId + " stopped >20min at " + $loc, 0));
@@ -66,10 +71,10 @@ rule "CEP_BreakdownDuringOrder"
         insert(new Alarm(AlarmType.EMERGENCY_REPLACEMENT, $truckId,
                 "Breakdown - order " + $order.getId() + " transferred to " + $spare.getId(), 0));
         messages.add("CEP ALERT: breakdown " + $truckId + " - order " + $order.getId()
-                + " transferred to " + $spare.getId());
+                + " replanned to " + $spare.getId() + " — dispatch spare to breakdown location for cargo transfer!");
 end
 
-// 4. Spike naloga - 5+ novih naloga u 15 minuta
+// 7. Spike naloga - 5+ novih naloga u 15 minuta
 rule "CEP_OrderSpike"
     when
         $count : Number(intValue >= 5) from accumulate(
@@ -77,10 +82,12 @@ rule "CEP_OrderSpike"
             count($e)
         )
     then
+        insert(new Alarm(AlarmType.ORDER_SPIKE, "FLEET",
+                "Order spike: " + $count + " new orders in 15min!", $count.intValue()));
         messages.add("CEP ALERT: spike - " + $count + " new orders in 15min - activating prioritization mode!");
 end
 
-// 5. Nagli pad goriva > 15% za 10 minuta -> sumnja na kvar
+// 8. Nagli pad goriva > 15% za 10 minuta -> sumnja na kvar
 rule "CEP_FuelDrop"
     when
         $e1 : FleetEvent(type == FleetEventType.FUEL_LEVEL, $truckId : entityId, $g1 : value)

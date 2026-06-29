@@ -10,5 +10,6 @@ public enum AlarmType {
     OVERLOADED_TRUCK,
     PROBLEMATIC_ROUTE,
     SHIFT_WARNING,
-    IDLE_FLEET
+    IDLE_FLEET,
+    ORDER_SPIKE
 }

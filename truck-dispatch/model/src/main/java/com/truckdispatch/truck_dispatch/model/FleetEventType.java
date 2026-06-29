@@ -5,5 +5,8 @@ public enum FleetEventType {
     POSITION,
     BREAKDOWN,
     FUEL_LEVEL,
-    NEW_ORDER
+    NEW_ORDER,
+    TRIP_STARTED,
+    UNLOADING_STARTED,
+    DELIVERY_CONFIRMED
 }

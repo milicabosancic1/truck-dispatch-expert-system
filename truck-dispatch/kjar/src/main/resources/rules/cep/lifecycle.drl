@@ -1,0 +1,57 @@
+package rules.cep;
+
+import com.truckdispatch.truck_dispatch.model.FleetEvent;
+import com.truckdispatch.truck_dispatch.model.FleetEventType;
+import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
+
+global java.util.List messages;
+
+declare FleetEvent
+    @role(event)
+    @timestamp(timestamp)
+    @expires(1h)
+end
+
+// LIFECYCLE PRAVILA — event-driven state machine tranzicije naloga
+// Nisu CEP u strogom smislu (nema temporalnih operatora ni vremenskih prozora),
+// ali su u CEP sesiji jer dijele stanje flote s CEP pravilima.
+
+// Vozač potvrdio preuzimanje robe -> nalog prelazi u IN_PROGRESS
+rule "Lifecycle_TripStarted"
+    when
+        FleetEvent( type == FleetEventType.TRIP_STARTED, $truckId : entityId )
+        $order : DeliveryOrder( status == OrderStatus.ASSIGNED,
+                                assignedTruckId == $truckId )
+    then
+        modify($order) { setStatus(OrderStatus.IN_PROGRESS); }
+        messages.add("Order " + $order.getId() + " picked up by truck " + $truckId + " — IN_PROGRESS");
+end
+
+// Vozač stigao na odredište, počeo istovar -> nalog u WAITING_UNLOADING
+rule "Lifecycle_UnloadingStarted"
+    when
+        FleetEvent( type == FleetEventType.UNLOADING_STARTED, $truckId : entityId )
+        $order : DeliveryOrder( status == OrderStatus.IN_PROGRESS,
+                                assignedTruckId == $truckId )
+    then
+        modify($order) { setStatus(OrderStatus.WAITING_UNLOADING); }
+        messages.add("Order " + $order.getId() + " — truck " + $truckId + " arrived, unloading in progress");
+end
+
+// Vozač potvrdio isporuku -> nalog COMPLETED, kamion slobodan
+// Pali se i iz IN_PROGRESS (bez istovara) i iz WAITING_UNLOADING (standardni tok)
+rule "Lifecycle_DeliveryCompleted"
+    when
+        FleetEvent( type == FleetEventType.DELIVERY_CONFIRMED, $truckId : entityId )
+        $order : DeliveryOrder( status == OrderStatus.IN_PROGRESS ||
+                                status == OrderStatus.WAITING_UNLOADING,
+                                assignedTruckId == $truckId )
+        $truck : Truck( id == $truckId )
+    then
+        modify($order) { setStatus(OrderStatus.COMPLETED); }
+        modify($truck)  { setStatus(TruckStatus.AVAILABLE); }
+        messages.add("Order " + $order.getId() + " COMPLETED — truck " + $truckId + " now available");
+end

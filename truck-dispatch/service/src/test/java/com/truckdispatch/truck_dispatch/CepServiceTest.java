@@ -86,6 +86,11 @@ class CepServiceTest {
     void vehicleStopped() {
         long t0 = System.currentTimeMillis() - 21 * 60_000L;
 
+        // Nalog mora biti IN_PROGRESS da bi alarm opalio
+        cepService.syncFleetState(
+                List.of(truck("K-02", 5000, TruckStatus.BUSY)),
+                List.of(inProgressOrder("O-STOP", "K-02", 1000)));
+
         cepService.processEvent(event(FleetEventType.POSITION, "K-02", 0, "45.267,19.833", t0));
         List<String> messages = cepService.processEvent(
                 event(FleetEventType.POSITION, "K-02", 0, "45.267,19.833", t0 + 21 * 60_000L));
@@ -123,6 +128,104 @@ class CepServiceTest {
         }
 
         assertThat(messages).anyMatch(message -> message.contains("spike") && message.contains("5"));
+        assertThat(cepService.getActiveAlarms())
+                .anyMatch(alarm -> alarm.getType() == AlarmType.ORDER_SPIKE
+                        && alarm.getEntityId().equals("FLEET"));
+    }
+
+    @Test
+    @DisplayName("TRIP_STARTED transitions order from ASSIGNED to IN_PROGRESS")
+    void tripStartedSetsInProgress() {
+        Truck truck = truck("K-01", 5000, TruckStatus.BUSY);
+        DeliveryOrder order = inProgressOrder("O-01", "K-01", 1000);
+        order.setStatus(OrderStatus.ASSIGNED);
+
+        cepService.syncFleetState(List.of(truck), List.of(order));
+        List<String> messages = cepService.processEvent(
+                event(FleetEventType.TRIP_STARTED, "K-01", 0, "", System.currentTimeMillis()));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
+        assertThat(messages).anyMatch(m -> m.contains("O-01") && m.contains("IN_PROGRESS"));
+    }
+
+    @Test
+    @DisplayName("DELIVERY_CONFIRMED transitions order to COMPLETED and frees the truck")
+    void deliveryCompletedSetsCompletedAndFreesTruck() {
+        Truck truck = truck("K-02", 5000, TruckStatus.BUSY);
+        DeliveryOrder order = inProgressOrder("O-02", "K-02", 1000);
+
+        cepService.syncFleetState(List.of(truck), List.of(order));
+        List<String> messages = cepService.processEvent(
+                event(FleetEventType.DELIVERY_CONFIRMED, "K-02", 0, "", System.currentTimeMillis()));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.COMPLETED);
+        assertThat(truck.getStatus()).isEqualTo(TruckStatus.AVAILABLE);
+        assertThat(messages).anyMatch(m -> m.contains("O-02") && m.contains("COMPLETED"));
+    }
+
+    @Test
+    @DisplayName("vehicle stopped alarm fires only when truck has IN_PROGRESS order")
+    void vehicleStoppedOnlyForInProgressOrder() {
+        long t0 = System.currentTimeMillis() - 21 * 60_000L;
+
+        // Kamion bez aktivnog naloga — alarm se NE smije okidati
+        cepService.processEvent(event(FleetEventType.POSITION, "K-IDLE", 0, "45.267,19.833", t0));
+        List<String> messages = cepService.processEvent(
+                event(FleetEventType.POSITION, "K-IDLE", 0, "45.267,19.833", t0 + 21 * 60_000L));
+
+        assertThat(messages).noneMatch(m -> m.contains("K-IDLE") && m.contains("stopped"));
+        assertThat(cepService.getActiveAlarms())
+                .noneMatch(a -> a.getType() == AlarmType.VEHICLE_STOPPED
+                        && a.getEntityId().equals("K-IDLE"));
+    }
+
+    @Test
+    @DisplayName("UNLOADING_STARTED transitions order from IN_PROGRESS to WAITING_UNLOADING")
+    void unloadingStartedSetsWaitingUnloading() {
+        Truck truck = truck("K-03", 5000, TruckStatus.BUSY);
+        DeliveryOrder order = inProgressOrder("O-03", "K-03", 1000);
+
+        cepService.syncFleetState(List.of(truck), List.of(order));
+        List<String> messages = cepService.processEvent(
+                event(FleetEventType.UNLOADING_STARTED, "K-03", 0, "", System.currentTimeMillis()));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.WAITING_UNLOADING);
+        assertThat(messages).anyMatch(m -> m.contains("O-03") && m.contains("unloading"));
+    }
+
+    @Test
+    @DisplayName("vehicle stopped alarm does NOT fire when truck is unloading")
+    void vehicleStoppedDoesNotFireDuringUnloading() {
+        long t0 = System.currentTimeMillis() - 21 * 60_000L;
+
+        DeliveryOrder order = inProgressOrder("O-04", "K-04", 1000);
+        order.setStatus(OrderStatus.WAITING_UNLOADING);
+        cepService.syncFleetState(List.of(truck("K-04", 5000, TruckStatus.BUSY)), List.of(order));
+
+        cepService.processEvent(event(FleetEventType.POSITION, "K-04", 0, "45.267,19.833", t0));
+        List<String> messages = cepService.processEvent(
+                event(FleetEventType.POSITION, "K-04", 0, "45.267,19.833", t0 + 21 * 60_000L));
+
+        assertThat(messages).noneMatch(m -> m.contains("K-04") && m.contains("stopped"));
+        assertThat(cepService.getActiveAlarms())
+                .noneMatch(a -> a.getType() == AlarmType.VEHICLE_STOPPED
+                        && a.getEntityId().equals("K-04"));
+    }
+
+    @Test
+    @DisplayName("DELIVERY_CONFIRMED from WAITING_UNLOADING completes order and frees truck")
+    void deliveryConfirmedFromWaitingUnloading() {
+        Truck truck = truck("K-05", 5000, TruckStatus.BUSY);
+        DeliveryOrder order = inProgressOrder("O-05", "K-05", 1000);
+        order.setStatus(OrderStatus.WAITING_UNLOADING);
+
+        cepService.syncFleetState(List.of(truck), List.of(order));
+        List<String> messages = cepService.processEvent(
+                event(FleetEventType.DELIVERY_CONFIRMED, "K-05", 0, "", System.currentTimeMillis()));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.COMPLETED);
+        assertThat(truck.getStatus()).isEqualTo(TruckStatus.AVAILABLE);
+        assertThat(messages).anyMatch(m -> m.contains("O-05") && m.contains("COMPLETED"));
     }
 
     @Test
@@ -136,8 +239,8 @@ class CepServiceTest {
         List<String> messages = cepService.processEvent(
                 event(FleetEventType.BREAKDOWN, "K-BROKEN", 0, "", System.currentTimeMillis()));
 
-        assertThat(messages).anyMatch(message -> message.contains("breakdown K-BROKEN")
-                && message.contains("K-SPARE"));
+        assertThat(messages).anyMatch(m -> m.contains("breakdown K-BROKEN")
+                && m.contains("K-SPARE") && m.contains("cargo transfer"));
         assertThat(order.getStatus()).isEqualTo(OrderStatus.REPLANNED);
         assertThat(order.getAssignedTruckId()).isEqualTo("K-SPARE");
         assertThat(spare.getStatus()).isEqualTo(TruckStatus.BUSY);
