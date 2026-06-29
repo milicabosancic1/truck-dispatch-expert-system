@@ -2,47 +2,165 @@
   <div class="panel-header">
     <div>
       <p class="eyebrow">Real-time stream</p>
-      <h2>Fleet Event (CEP)</h2>
+      <h2>Fleet Events (CEP / Drools Fusion)</h2>
     </div>
+    <button class="btn-link" (click)="refreshFleet()">
+      {{ fleetLoading ? 'Učitava…' : '↻ Osveži stanje' }}
+    </button>
   </div>
 
+  <!-- ── 1. FLEET STATE ── -->
+  <section class="card cep-fleet-card">
+    <div class="section-header">
+      <h3>Trenutno stanje flote</h3>
+      <p class="section-meta">Kamioni i aktivni nalozi — koristiti ID-eve u formama ispod</p>
+    </div>
+    @if (fleetLoading) {
+      <p class="muted-text">Učitava…</p>
+    } @else {
+      <div class="cep-fleet-grid">
+        <div>
+          <p class="cep-fleet-label">Kamioni</p>
+          <div class="cep-chip-row">
+            @for (t of fleetTrucks; track t.id) {
+              <span class="cep-truck-chip" [class]="truckStatusClass(t.status)">
+                <span class="id-chip">{{ t.id }}</span>
+                {{ t.status }}
+              </span>
+            }
+            @if (fleetTrucks.length === 0) {
+              <span class="muted-text">Nema podataka — pokrenite FC otpremu ili resetujte flotu</span>
+            }
+          </div>
+        </div>
+        <div>
+          <p class="cep-fleet-label">Aktivni nalozi</p>
+          <div class="cep-chip-row">
+            @for (o of fleetOrders; track o.id) {
+              <span class="cep-order-chip">
+                <span class="id-chip">{{ o.id }}</span>
+                {{ o.assignedTruckId || '?' }}
+                <span class="badge badge-{{ o.status.toLowerCase() }}">{{ o.status }}</span>
+              </span>
+            }
+            @if (fleetOrders.length === 0) {
+              <span class="muted-text">Nema aktivnih naloga</span>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- ── 2. ACTIVE ALARMS ── -->
+  @if (activeAlarms.length > 0) {
+    <section class="card cep-alarms-card">
+      <div class="section-header">
+        <div>
+          <h3>Aktivni alarmi CEP sesije</h3>
+          <p class="section-meta">{{ activeAlarms.length }} alarm/a u working memory</p>
+        </div>
+        <span class="badge badge-alarm">CEP Alarms</span>
+      </div>
+      <div class="cep-alarm-list">
+        @for (alarm of activeAlarms; track $index) {
+          <div class="cep-alarm-row alarm-{{ alarm.type.toLowerCase() }}">
+            <span class="cep-alarm-icon">{{ alarmIcon(alarm.type) }}</span>
+            <span class="cep-alarm-type">{{ alarm.type }}</span>
+            <span class="id-chip">{{ alarm.entityId }}</span>
+            <span class="cep-alarm-msg">{{ alarm.message }}</span>
+            @if (alarm.affectedCount > 0) {
+              <span class="cep-alarm-count">×{{ alarm.affectedCount }}</span>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ── 3. SEND EVENT ── -->
   <section class="card">
     <div class="section-header">
-      <h3>Event payload</h3>
-      <p class="section-meta">Submitted to the Drools stream session</p>
+      <h3>Pošalji event</h3>
+      <p class="section-meta">Drools Fusion stream session — temporal CEP pravila</p>
     </div>
+
+    <!-- Lifecycle scenariji -->
+    <div class="cep-scenarios">
+      <span class="scenario-label">Lifecycle naloga:</span>
+      <button class="btn btn-scenario btn-lifecycle" (click)="loadScenario('trip_started')">🚛 Trip Started</button>
+      <button class="btn btn-scenario btn-lifecycle" (click)="loadScenario('delivery_confirmed')">✅ Delivery Confirmed</button>
+    </div>
+
+    <!-- Temporal/incident scenariji -->
+    <div class="cep-scenarios">
+      <span class="scenario-label">Incidenti i temporalni paterni:</span>
+      <button class="btn btn-scenario" (click)="loadScenario('breakdown')">🔧 Kvar</button>
+      <button class="btn btn-scenario" (click)="loadScenario('delay')">⏱ Kašnjenje</button>
+      <button class="btn btn-scenario ds-fuel" (click)="runFuelDrop()" [disabled]="loading">⛽ Pad goriva 80%→62% (CEP_FuelDrop)</button>
+      <button class="btn btn-scenario ds-acc" (click)="runOrderSpike()" [disabled]="loading">📦 Order Spike — 5× NEW_ORDER (CEP_OrderSpike)</button>
+    </div>
+    <p class="cep-temporal-note">
+      <strong>Temporalni prozori:</strong>
+      CEP_DelayEscalation — 3 kašnjenja / 30 min &nbsp;·&nbsp;
+      CEP_FuelDrop — pad &gt;15% / 10 min &nbsp;·&nbsp;
+      CEP_OrderSpike — 5 naloga / 15 min &nbsp;·&nbsp;
+      CEP_VehicleStopped — ista pozicija &gt;20 min
+    </p>
+
+    <!-- Forma za ručni event -->
     <div class="form-row">
-      <label>Event Type
+      <label>Tip eventa
         <select [(ngModel)]="event.type">
           @for (t of eventTypes; track t) { <option [value]="t">{{ t }}</option> }
         </select>
       </label>
-      <label>Entity ID <input [(ngModel)]="event.entityId" placeholder="e.g. V-05" /></label>
-      <label>Value <input type="number" [(ngModel)]="event.value" placeholder="delay min / fuel % / ..." /></label>
-      <label>Location <input [(ngModel)]="event.location" placeholder="e.g. Novi Sad" /></label>
+      <label>Entity ID (kamion/nalog)<input [(ngModel)]="event.entityId" placeholder="npr. K-01 ili O-1" /></label>
+      <label>Value<input type="number" [(ngModel)]="event.value" placeholder="kašnjenje min / gorivo % / …" /></label>
+      <label>Location<input [(ngModel)]="event.location" placeholder="npr. Novi Sad" /></label>
     </div>
     <div class="form-actions">
-      <button class="btn btn-primary" (click)="send()" [disabled]="loading">
-        {{ loading ? 'Sending...' : 'Send Event' }}
+      <button class="btn btn-primary" (click)="send()" [disabled]="loading || !event.entityId">
+        {{ loading ? 'Šalje se…' : 'Pošalji event' }}
       </button>
     </div>
 
-    @if (error) {
-      <div class="alert-error">{{ error }}</div>
-    }
+    @if (error) { <div class="alert-error">{{ error }}</div> }
   </section>
 
-  @if (messages.length > 0) {
+  <!-- ── 4. EVENT LOG ── -->
+  @if (eventLog.length > 0) {
     <section class="card">
       <div class="section-header">
-        <h3>CEP Response</h3>
-        <p class="section-meta">{{ messages.length }} messages</p>
+        <h3>Event Log</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <p class="section-meta">{{ eventLog.length }} poslato</p>
+          <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px" (click)="clearLog()">Obriši</button>
+        </div>
       </div>
-      <ul class="message-list">
-        @for (msg of messages; track $index) {
-          <li>{{ msg }}</li>
-        }
-      </ul>
+      @for (entry of eventLog; track $index) {
+        <div class="event-log-entry">
+          <div class="event-log-header">
+            <span class="event-icon">{{ eventIcon(entry.event.type) }}</span>
+            <span class="event-type-badge badge-event-{{ entry.event.type.toLowerCase() }}">{{ entry.event.type }}</span>
+            <span class="event-entity">{{ entry.event.entityId }}</span>
+            @if (entry.event.value) {
+              <span class="event-value">val={{ entry.event.value }}</span>
+            }
+            @if (entry.event.location) {
+              <span class="event-loc">📍 {{ entry.event.location }}</span>
+            }
+            <span class="event-time">{{ entry.time }}</span>
+          </div>
+          @if (entry.messages.length > 0) {
+            <ul class="message-list event-responses">
+              @for (msg of entry.messages; track $index) { <li>{{ msg }}</li> }
+            </ul>
+          } @else {
+            <p class="event-no-response">Nema odgovora od engine-a za ovaj event.</p>
+          }
+        </div>
+      }
     </section>
   }
 </div>

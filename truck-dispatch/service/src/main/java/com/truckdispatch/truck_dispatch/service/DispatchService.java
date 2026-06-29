@@ -28,9 +28,13 @@ public class DispatchService {
         // subsequent calls with empty lists leave the stored state untouched).
         // When the request provides a fleet list it represents the full current configuration —
         // replace the stored state so stale entries from a previous configuration don't linger.
+        boolean fullOverride = !request.getTrucks().isEmpty()
+                            && !request.getDrivers().isEmpty()
+                            && !request.getRoutes().isEmpty();
         if (!request.getTrucks().isEmpty())  fleetState.replaceTrucks(request.getTrucks());
         if (!request.getDrivers().isEmpty()) fleetState.replaceDrivers(request.getDrivers());
         if (!request.getRoutes().isEmpty())  fleetState.replaceRoutes(request.getRoutes());
+        if (fullOverride) fleetState.clearOrders();
 
         KieSession session = kieContainer.newKieSession("TruckDispatchSession");
         List<String> messages = new ArrayList<>();

@@ -1,47 +1,69 @@
 <div class="panel results-panel">
   <div class="panel-header">
     <div>
-      <p class="eyebrow">Engine output</p>
-      <h2>Dispatch Result</h2>
+      <p class="eyebrow">{{ mode === 'bc' ? 'Backward Chaining' : 'Izlaz engine-a' }}</p>
+      <h2>{{ mode === 'bc' ? 'Dijagnoza odbijanja' : 'Rezultat otpreme' }}</h2>
     </div>
   </div>
 
-  <section class="summary-strip result-summary">
-    <div class="summary-cell success">
-      <span>Assigned</span>
-      <strong>{{ assignedCount }}</strong>
-    </div>
-    <div class="summary-cell warning">
-      <span>Waiting</span>
-      <strong>{{ waitingCount }}</strong>
-    </div>
-    <div class="summary-cell danger">
-      <span>Issues</span>
-      <strong>{{ issueCount }}</strong>
-    </div>
-    <div class="summary-cell">
-      <span>Messages</span>
-      <strong>{{ result.messages.length }}</strong>
-    </div>
+  <section class="summary-strip">
+    <div class="summary-cell success"> <span>Dodeljeno</span>    <strong>{{ assignedCount }}</strong></div>
+    <div class="summary-cell warning"> <span>Čekanje</span>      <strong>{{ waitingCount }}</strong></div>
+    <div class="summary-cell danger">  <span>Problemi</span>     <strong>{{ issueCount }}</strong></div>
+    <div class="summary-cell replanned"><span>Replanirano</span> <strong>{{ replannedCount }}</strong></div>
+    <div class="summary-cell">         <span>Poruke</span>       <strong>{{ result.messages.length }}</strong></div>
   </section>
 
+  <!-- BC Dijagnoza — aktivira se automatski za svaki neuspeli nalog (ista sesija kao FC pravila) -->
+  @if (bcDiagnoses.length > 0) {
+    <section class="card bc-section">
+      <div class="section-header">
+        <div>
+          <h3>Backward Chaining — Dijagnoza odbijanja</h3>
+          <p class="section-meta">Lanac uzroka za {{ bcDiagnoses.length }} nedodeljenih naloga</p>
+        </div>
+        <span class="badge badge-alarm">Backward Chaining</span>
+      </div>
+      <p class="bc-auto-note">
+        @if (mode === 'bc') {
+          Nalog je već odbijen. Backward chaining je pretražio radnu memoriju i izgradio lanac uzroka
+          od konkretnog razloga odbijanja do <code>OrderUnassigned</code>.
+        } @else {
+          BC pravila dele istu Drools sesiju sa FC pravilima — dijagnoza se aktivira automatski za svaki
+          <code>UNFEASIBLE</code> / <code>WAITING_RESOURCES</code> nalog.
+        }
+      </p>
+      @for (diag of bcDiagnoses; track diag.orderId) {
+        <div class="bc-card">
+          <div class="bc-order-header">
+            <span class="badge badge-{{ diag.status.toLowerCase() }}">{{ diag.status }}</span>
+            <strong>Nalog {{ diag.orderId }}</strong>
+            <span class="bc-hop-count">{{ diag.causes.length + 1 }} čvorova u lancu</span>
+          </div>
+          <div class="bc-chain">
+            @for (cause of diag.causes; track cause) {
+              <span class="bc-node">{{ cause }}</span>
+              <span class="bc-arrow">→</span>
+            }
+            <span class="bc-node bc-root">OrderUnassigned</span>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Obrađeni nalozi -->
   <section class="card">
     <div class="section-header">
-      <h3>Processed Orders</h3>
-      <p class="section-meta">{{ result.processedOrders.length }} orders returned</p>
+      <h3>Obrađeni nalozi</h3>
+      <p class="section-meta">{{ result.processedOrders.length }} naloga obrađeno</p>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Destination</th>
-            <th>Status</th>
-            <th>Priority</th>
-            <th>Cargo</th>
-            <th>Truck</th>
-            <th>Driver</th>
-            <th>Delay</th>
+            <th>ID</th><th>Destinacija</th><th>Status</th>
+            <th>Prioritet</th><th>Teret</th><th>Kamion</th><th>Vozač</th><th>Kašnjenje</th>
           </tr>
         </thead>
         <tbody>
@@ -52,9 +74,9 @@
               <td><span class="badge badge-{{ order.status.toLowerCase() }}">{{ order.status }}</span></td>
               <td>{{ order.priority }}</td>
               <td>{{ order.cargoType }}</td>
-              <td>{{ order.assignedTruckId || '-' }}</td>
-              <td>{{ order.assignedDriverId || '-' }}</td>
-              <td>{{ order.delayMin ?? '-' }}</td>
+              <td>{{ order.assignedTruckId || '—' }}</td>
+              <td>{{ order.assignedDriverId || '—' }}</td>
+              <td>{{ order.delayMin != null && order.delayMin > 0 ? order.delayMin + ' min' : '—' }}</td>
             </tr>
           }
         </tbody>
@@ -62,45 +84,25 @@
     </div>
   </section>
 
-  <section class="card">
-    <div class="section-header">
-      <h3>Rule Trace</h3>
-      <p class="section-meta">{{ result.messages.length }} messages</p>
-    </div>
-    @if (result.messages.length === 0) {
-      <p class="empty-state compact-empty">No messages returned.</p>
-    } @else {
-      <ul class="message-list">
-        @for (msg of result.messages; track $index) {
-          <li>{{ msg }}</li>
-        }
-      </ul>
-    }
-  </section>
-
+  <!-- Alarmi -->
   @if (result.alarms.length > 0) {
     <section class="card">
       <div class="section-header">
-        <h3>Alarms</h3>
-        <p class="section-meta">{{ result.alarms.length }} active alarms</p>
+        <h3>Alarmi</h3>
+        <p class="section-meta">{{ result.alarms.length }} aktivnih alarma</p>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>
-              <th>Type</th>
-              <th>Entity</th>
-              <th>Message</th>
-              <th>Affected</th>
-            </tr>
+            <tr><th>Tip</th><th>Entitet</th><th>Poruka</th><th>Broj</th></tr>
           </thead>
           <tbody>
             @for (alarm of result.alarms; track $index) {
               <tr>
-                <td><span class="badge badge-alarm">{{ alarm.type }}</span></td>
+                <td><span class="badge badge-alarm-{{ alarm.type.toLowerCase() }}">{{ alarm.type }}</span></td>
                 <td class="strong-cell">{{ alarm.entityId }}</td>
                 <td>{{ alarm.message }}</td>
-                <td>{{ alarm.affectedCount }}</td>
+                <td>{{ alarm.affectedCount > 0 ? alarm.affectedCount : '—' }}</td>
               </tr>
             }
           </tbody>
@@ -108,4 +110,21 @@
       </div>
     </section>
   }
+
+  <!-- Trag pravila -->
+  <section class="card">
+    <div class="section-header">
+      <h3>Trag pravila</h3>
+      <p class="section-meta">{{ regularMessages.length }} engine poruka</p>
+    </div>
+    @if (regularMessages.length === 0) {
+      <p class="empty-state compact-empty">Nema poruka.</p>
+    } @else {
+      <ul class="message-list">
+        @for (msg of regularMessages; track $index) {
+          <li [class]="messageClass(msg)">{{ msg }}</li>
+        }
+      </ul>
+    }
+  </section>
 </div>

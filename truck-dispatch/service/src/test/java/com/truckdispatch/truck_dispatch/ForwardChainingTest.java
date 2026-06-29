@@ -402,6 +402,38 @@ class ForwardChainingTest {
         }
 
         @Test
+        @DisplayName("Low-fuel truck excluded when range < route distance (5% fuel, 80 km)")
+        void insufficientFuelExcludesTruck() {
+            // fuelPercent=5 → estimated range = 5*10 = 50 km; route = 80 km → excluded
+            Truck tLow  = truck("TL", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 5,  5);
+            Truck tFull = truck("TF", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 90, 20);
+            Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
+            Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
+            Route  r  = route("R1", RoadType.REGIONAL, 80, 90, false);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 10, 3, List.of(tLow, tFull), List.of(d1, d2), List.of(r),
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
+
+            assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TF");
+            assertThat(res.getMessages()).anyMatch(m -> m.contains("TL") && m.contains("excluded") && m.contains("fuel"));
+        }
+
+        @Test
+        @DisplayName("Sufficient-fuel truck NOT excluded when range >= route distance (15% fuel, 100 km)")
+        void sufficientFuelNotExcluded() {
+            // fuelPercent=15 → range = 150 km >= 100 km → NOT excluded
+            Truck t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 15, 5);
+            Driver d = driver("D1", true, 1, "CE", false, 1, 5);
+            Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
+            DispatchResult res = dispatchService.processDispatch(
+                    req(15, 10, 3, List.of(t), List.of(d), List.of(r),
+                            List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
+
+            assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
+            assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("T1");
+        }
+
+        @Test
         @DisplayName("MEDIUM truck excluded from CITY road type")
         void mediumTruckNotAllowedOnCityRoute() {
             // Samo SMALL je dozvoljen na CITY; MEDIUM nije → nalog u WAITING_RESOURCES ako je dostupan samo MEDIUM

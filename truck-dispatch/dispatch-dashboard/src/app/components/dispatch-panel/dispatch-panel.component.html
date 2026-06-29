@@ -1,223 +1,501 @@
 <div class="panel dispatch-panel">
-  <div class="panel-header">
-    <div>
-      <p class="eyebrow">Rule engine input</p>
-      <h2>Dispatch Request</h2>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-secondary" (click)="loadDemo()">Cold Chain Demo</button>
-      <button class="btn btn-secondary" (click)="loadIncidentDemo()">ADR Demo</button>
-      <button class="btn btn-secondary" (click)="reset()">Reset</button>
-      <button class="btn btn-primary" (click)="submit()" [disabled]="loading">
-        {{ loading ? 'Processing...' : 'Run Dispatch' }}
-      </button>
-    </div>
-  </div>
 
-  <section class="summary-strip">
-    <div class="summary-cell">
-      <span>Orders</span>
-      <strong>{{ request.orders.length }}</strong>
-    </div>
-    <div class="summary-cell">
-      <span>Payload</span>
-      <strong>{{ totalWeightKg | number:'1.0-0' }} kg</strong>
-    </div>
-    <div class="summary-cell">
-      <span>Available trucks</span>
-      <strong>{{ availableTrucks }}/{{ request.trucks.length }}</strong>
-    </div>
-    <div class="summary-cell">
-      <span>Available drivers</span>
-      <strong>{{ availableDrivers }}/{{ request.drivers.length }}</strong>
-    </div>
-    <div class="summary-cell">
-      <span>Special cargo</span>
-      <strong>{{ specialOrders }}</strong>
-    </div>
-  </section>
+  <!-- ══════════════════════════════════════════════════════════════════
+       OTPREMA  (FC)  —  dispecer unosi nalog, sistem dodeljuje kamion
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (mode === 'fc') {
 
-  @if (error) {
-    <div class="alert-error">{{ error }}</div>
-  }
-
-  <section class="card context-card">
-    <div class="section-header">
-      <h3>Context</h3>
-    </div>
-    <div class="form-row compact">
-      <label>Temperature (C)
-        <input type="number" [(ngModel)]="request.temperature" />
-      </label>
-      <label>Hour (0-23)
-        <input type="number" min="0" max="23" [(ngModel)]="request.hour" />
-      </label>
-      <label>Day of week (1=Mon, 7=Sun)
-        <input type="number" min="1" max="7" [(ngModel)]="request.dayOfWeek" />
-      </label>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="section-header">
-      <div>
-        <h3>Orders</h3>
-        <p class="section-meta">{{ request.orders.length }} active input rows</p>
+    <!-- Fleet status (read-only, iz sistema) -->
+    <section class="fleet-status-bar">
+      <div class="fsb-label">
+        Trenutna flota
+        @if (fleetLoading) { <span class="muted-text">Učitava…</span> }
+        @else {
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-link" (click)="loadFleet()">↻ Osveži</button>
+            <button class="btn-link" style="color:#e85d04" (click)="resetAndLoadFleet()" title="Vraća flotu na podrazumevanu početnu konfiguraciju">↺ Reset na default</button>
+          </div>
+        }
       </div>
-      <button class="btn btn-add" (click)="addOrder()">Add Order</button>
-    </div>
-    @if (request.orders.length === 0) {
-      <div class="empty-state compact-empty">No orders yet.</div>
-    }
-    @for (order of request.orders; track $index) {
-      <div class="item-card">
-        <div class="item-title">
-          <strong>{{ order.id || 'New order' }}</strong>
-          <span>{{ order.priority }} / {{ order.cargoType }}</span>
+      @if (fleet) {
+        <div class="fsb-groups">
+          <div class="fsb-group">
+            <span class="fsb-group-label">Kamioni</span>
+            @for (t of fleet.trucks; track t.id) {
+              <span class="fsb-chip" [class.chip-unavail]="t.status !== 'AVAILABLE'">
+                <span class="id-chip">{{ t.id }}</span>
+                {{ t.type }} · {{ t.maxCapacityKg | number:'1.0-0' }} kg
+                @if (t.hasRefrigerationUnit) { <span class="tag-frigo">❄️</span> }
+                @if (t.hasAdrEquipment)      { <span class="tag-adr">ADR</span> }
+                <span class="chip-status" [class.status-ok]="t.status === 'AVAILABLE'">{{ t.status }}</span>
+              </span>
+            }
+          </div>
+          <div class="fsb-group">
+            <span class="fsb-group-label">Vozači</span>
+            @for (d of fleet.drivers; track d.id) {
+              <span class="fsb-chip" [class.chip-unavail]="!d.available">
+                <span class="id-chip">{{ d.id }}</span>
+                {{ d.license }} · {{ d.workingHoursToday }}h
+                @if (d.hasAdrLicense) { <span class="tag-adr">ADR</span> }
+                @if (!d.available) { <span class="chip-status">NEDOSTUPAN</span> }
+              </span>
+            }
+          </div>
+          <div class="fsb-group">
+            <span class="fsb-group-label">Rute</span>
+            @for (r of fleet.routes; track r.id) {
+              <span class="fsb-chip">
+                <span class="id-chip">{{ r.id }}</span>
+                {{ r.roadType }} · {{ r.distanceKm }} km
+                @if (r.hasTunnel) { <span class="tag-tunnel">tunel</span> }
+              </span>
+            }
+          </div>
         </div>
-        <button class="icon-btn danger item-remove" type="button" title="Remove order" (click)="removeOrder($index)">x</button>
-        <div class="form-row">
-          <label>ID <input [(ngModel)]="order.id" /></label>
-          <label>Destination <input [(ngModel)]="order.destination" /></label>
-          <label>Weight (kg) <input type="number" [(ngModel)]="order.weightKg" /></label>
-          <label>Deadline (min) <input type="number" [(ngModel)]="order.deliveryDeadlineMin" /></label>
-          <label>Route ID <input [(ngModel)]="order.routeId" /></label>
-          <label>Cargo Type
-            <select [(ngModel)]="order.cargoType">
+      } @else {
+        <p class="muted-text">Nije moguće učitati flotu — da li backend radi?</p>
+      }
+    </section>
+
+    <!-- Forma za unos naloga -->
+    <section class="card order-form-card">
+      <div class="order-form-header">
+        <h3>Novi nalog za otpremu</h3>
+        @if (request.orders.length > 0) {
+          <span class="count-pill">{{ request.orders.length }} nalog/a</span>
+        }
+      </div>
+
+      <!-- Lista već dodatih naloga -->
+      @if (request.orders.length > 0) {
+        <div class="orders-list">
+          @for (o of request.orders; track $index) {
+            <div class="order-row">
+              <span class="id-chip">{{ o.id }}</span>
+              <span class="order-dest">{{ o.destination || '—' }}</span>
+              <span class="order-weight">{{ o.weightKg | number:'1.0-0' }} kg</span>
+              <span class="badge-cargo" [class.refrigerated]="o.cargoType === 'REFRIGERATED'" [class.hazardous]="o.cargoType === 'HAZARDOUS'">{{ o.cargoType }}</span>
+              <span class="badge-prio" [class.urgent]="o.priority === 'URGENT' || o.priority === 'CRITICAL_DELIVERY'" [class.high]="o.priority === 'HIGH'">{{ o.priority }}</span>
+              <button class="icon-btn danger" (click)="removeOrder($index)">✕</button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Forma za dodavanje jednog naloga -->
+      <div class="add-order-form">
+        <div class="aof-row">
+          <label>Destinacija
+            <input [(ngModel)]="newOrder.destination" placeholder="npr. Beograd" />
+          </label>
+          <label>Težina (kg)
+            <input type="number" [(ngModel)]="newOrder.weightKg" min="1" />
+          </label>
+          <label>Tip tereta
+            <select [(ngModel)]="newOrder.cargoType">
               @for (t of cargoTypes; track t) { <option [value]="t">{{ t }}</option> }
             </select>
           </label>
-          <label>Priority
-            <select [(ngModel)]="order.priority">
+          <label>Prioritet
+            <select [(ngModel)]="newOrder.priority">
               @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
             </select>
           </label>
-          <label>Status
-            <select [(ngModel)]="order.status">
-              <option value="NEW">NEW</option>
-              <option value="VALID">VALID</option>
+          <label>Ruta
+            <select [(ngModel)]="newOrder.routeId">
+              @for (r of currentRoutes; track r.id) {
+                <option [value]="r.id">{{ r.id }} — {{ r.roadType }} {{ r.distanceKm }}km</option>
+              }
             </select>
           </label>
         </div>
+        <button class="btn btn-add" (click)="addNewOrder()" [disabled]="!newOrder.destination">+ Dodaj nalog</button>
       </div>
-    }
-  </section>
 
-  <section class="card">
-    <div class="section-header">
-      <div>
-        <h3>Trucks</h3>
-        <p class="section-meta">{{ availableTrucks }} available from {{ request.trucks.length }}</p>
+      <!-- Kontekst -->
+      <div class="context-row">
+        <label>Temperatura (°C)<input type="number" [(ngModel)]="request.temperature" /></label>
+        <label>Sat (0–23)<input type="number" min="0" max="23" [(ngModel)]="request.hour" /></label>
+        <label>Dan (1=Pon)<input type="number" min="1" max="7" [(ngModel)]="request.dayOfWeek" /></label>
       </div>
-      <button class="btn btn-add" (click)="addTruck()">Add Truck</button>
-    </div>
-    @if (request.trucks.length === 0) {
-      <div class="empty-state compact-empty">No trucks yet.</div>
-    }
-    @for (truck of request.trucks; track $index) {
-      <div class="item-card">
-        <div class="item-title">
-          <strong>{{ truck.id || 'New truck' }}</strong>
-          <span>{{ truck.type }} / {{ truck.status }}</span>
-        </div>
-        <button class="icon-btn danger item-remove" type="button" title="Remove truck" (click)="removeTruck($index)">x</button>
-        <div class="form-row">
-          <label>ID <input [(ngModel)]="truck.id" /></label>
-          <label>Location <input [(ngModel)]="truck.location" /></label>
-          <label>Max Capacity (kg) <input type="number" [(ngModel)]="truck.maxCapacityKg" /></label>
-          <label>Fuel (%) <input type="number" min="0" max="100" [(ngModel)]="truck.fuelPercent" /></label>
-          <label>Distance to origin (km) <input type="number" [(ngModel)]="truck.distanceToOriginKm" /></label>
-          <label>Days since refrig. service <input type="number" [(ngModel)]="truck.daysSinceRefrigerationService" /></label>
-          <label>Type
-            <select [(ngModel)]="truck.type">
-              @for (t of truckTypes; track t) { <option [value]="t">{{ t }}</option> }
-            </select>
-          </label>
-          <label>Status
-            <select [(ngModel)]="truck.status">
-              @for (s of truckStatuses; track s) { <option [value]="s">{{ s }}</option> }
-            </select>
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" [(ngModel)]="truck.hasRefrigerationUnit" /> Refrigeration unit
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" [(ngModel)]="truck.hasAdrEquipment" /> ADR equipment
-          </label>
-        </div>
-      </div>
-    }
-  </section>
+    </section>
 
-  <section class="card">
-    <div class="section-header">
-      <div>
-        <h3>Drivers</h3>
-        <p class="section-meta">{{ availableDrivers }} available from {{ request.drivers.length }}</p>
-      </div>
-      <button class="btn btn-add" (click)="addDriver()">Add Driver</button>
-    </div>
-    @if (request.drivers.length === 0) {
-      <div class="empty-state compact-empty">No drivers yet.</div>
-    }
-    @for (driver of request.drivers; track $index) {
-      <div class="item-card">
-        <div class="item-title">
-          <strong>{{ driver.id || 'New driver' }}</strong>
-          <span>{{ driver.license }} / fatigue {{ driver.fatigueLevel }}</span>
-        </div>
-        <button class="icon-btn danger item-remove" type="button" title="Remove driver" (click)="removeDriver($index)">x</button>
-        <div class="form-row">
-          <label>ID <input [(ngModel)]="driver.id" /></label>
-          <label>License <input [(ngModel)]="driver.license" /></label>
-          <label>Working hours today <input type="number" step="0.5" [(ngModel)]="driver.workingHoursToday" /></label>
-          <label>Fatigue level (0-10) <input type="number" min="0" max="10" [(ngModel)]="driver.fatigueLevel" /></label>
-          <label>Years of experience <input type="number" [(ngModel)]="driver.yearsOfExperience" /></label>
-          <label class="checkbox-label">
-            <input type="checkbox" [(ngModel)]="driver.available" /> Available
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" [(ngModel)]="driver.hasAdrLicense" /> ADR license
-          </label>
-        </div>
-      </div>
-    }
-  </section>
+    @if (error) { <div class="alert-error">{{ error }}</div> }
 
-  <section class="card">
-    <div class="section-header">
-      <div>
-        <h3>Routes</h3>
-        <p class="section-meta">{{ request.routes.length }} route definitions</p>
-      </div>
-      <button class="btn btn-add" (click)="addRoute()">Add Route</button>
+    <!-- Akcije -->
+    <div class="form-actions-bar">
+      <button class="btn btn-primary btn-run"
+              (click)="submit()"
+              [disabled]="loading || request.orders.length === 0">
+        {{ loading ? 'Procesiranje…' : '▶ Dispatch' }}
+      </button>
+      <button class="btn btn-secondary" (click)="reset()">Resetuj</button>
     </div>
-    @if (request.routes.length === 0) {
-      <div class="empty-state compact-empty">No routes yet.</div>
-    }
-    @for (route of request.routes; track $index) {
-      <div class="item-card">
-        <div class="item-title">
-          <strong>{{ route.id || 'New route' }}</strong>
-          <span>{{ route.roadType }} / {{ route.distanceKm || 0 }} km</span>
+
+    <!-- Demo prečice -->
+    <div class="demo-shortcuts">
+      <span class="ds-label">Brzi primeri za demonstraciju:</span>
+      <button class="ds-btn ds-cold"     (click)="loadDemo()">🧊 Cold Chain</button>
+      <button class="ds-btn ds-adr"      (click)="loadIncidentDemo()">⚠️ ADR Incident</button>
+      <button class="ds-btn ds-domino"   (click)="loadDominoDemo()">🌊 Domino efekat</button>
+      <button class="ds-btn ds-routecap" (click)="loadRouteCapacityDemo()">🚧 Kapacitet rute (8t, limit 5t)</button>
+      <button class="ds-btn ds-deadline" (click)="loadDeadlineMissDemo()">⏱️ Rok dostave (45 min, ruta 120 min)</button>
+      <button class="ds-btn ds-fuel"    (click)="loadLowFuelDemo()">⛽ Malo goriva (5%, ruta 80 km)</button>
+      <button class="ds-btn ds-service" (click)="loadServiceOverdueDemo()">🔧 Servis prekoračen (45 dana, max 30)</button>
+      <button class="ds-btn ds-hours"   (click)="loadDriverHoursDemo()">🕐 Vozač prekoračio bi sate (6.5h + 2h ruta)</button>
+    </div>
+
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       DIJAGNOSTIKA  (BC)  —  zašto nalog nije dodeljen?
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (mode === 'bc') {
+
+    <!-- ── 1. PRIMARNA AKCIJA: dijagnoza iz fleet state-a ── -->
+    <section class="card bc-fleet-card">
+      <div class="section-header">
+        <div>
+          <h3>Dijagnoza iz trenutnog stanja flote</h3>
+          <p class="section-meta">
+            BC pravila i FC pravila su u istoj Drools sesiji — svaki neuspeli nalog već nosi dijagnozu.
+          </p>
         </div>
-        <button class="icon-btn danger item-remove" type="button" title="Remove route" (click)="removeRoute($index)">x</button>
-        <div class="form-row">
-          <label>ID <input [(ngModel)]="route.id" /></label>
-          <label>Distance (km) <input type="number" [(ngModel)]="route.distanceKm" /></label>
-          <label>Est. time (h) <input type="number" step="0.5" [(ngModel)]="route.estimatedTimeHours" /></label>
-          <label>Max capacity (kg) <input type="number" [(ngModel)]="route.maxCapacityKg" /></label>
-          <label>Max speed (km/h) <input type="number" [(ngModel)]="route.maxSpeedKmh" /></label>
-          <label>Road type
-            <select [(ngModel)]="route.roadType">
-              @for (r of roadTypes; track r) { <option [value]="r">{{ r }}</option> }
-            </select>
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" [(ngModel)]="route.hasTunnel" /> Has tunnel
-          </label>
+        <button class="btn btn-link" (click)="loadFleetFailedOrders()">↻ Osveži</button>
+      </div>
+
+      @if (fleetFailedLoading) {
+        <p class="muted-text">Učitava stanje flote…</p>
+      } @else if (fleetFailedOrders.length === 0) {
+        <div class="bc-no-failures">
+          <span class="bc-no-icon">✓</span>
+          <span>Nema neuspelih naloga u sistemu — svi nalozi su dodeljeni ili je fleet prazan.</span>
+          <span class="muted-text">Pokrenite FC otpremu prvo, ili koristite demo scenario ispod.</span>
+        </div>
+      } @else {
+        <div class="bc-failed-list">
+          @for (o of fleetFailedOrders; track o.id) {
+            <div class="bc-failed-row">
+              <span class="id-chip">{{ o.id }}</span>
+              <span class="order-dest">{{ o.destination || '—' }}</span>
+              <span class="order-weight">{{ o.weightKg | number:'1.0-0' }} kg</span>
+              <span class="badge-cargo"
+                    [class.refrigerated]="o.cargoType === 'REFRIGERATED'"
+                    [class.hazardous]="o.cargoType === 'HAZARDOUS'">{{ o.cargoType }}</span>
+              <span class="badge badge-{{ o.status.toLowerCase() }}">{{ o.status }}</span>
+            </div>
+          }
+        </div>
+        <div class="form-actions-bar" style="margin-top:12px">
+          <button class="btn btn-primary btn-run"
+                  (click)="diagnoseFleet()"
+                  [disabled]="loading">
+            {{ loading ? 'Dijagnostikujem…' : '🔍 Dijagnostikuj ' + fleetFailedOrders.length + ' neuspelih naloga' }}
+          </button>
+        </div>
+      }
+
+      @if (error) { <div class="alert-error" style="margin-top:10px">{{ error }}</div> }
+    </section>
+
+    <!-- ── 2. DEMO SCENARIJI ── -->
+    <div class="demo-shortcuts">
+      <span class="ds-label">BC demo scenariji — nalog je već odbijen, Drools gradi lanac uzroka:</span>
+      <button class="ds-btn ds-bc"       (click)="loadBcNoCapacityScenario(); submit()">🔍 Nema kapaciteta (8 000 kg → K-1 samo 2 000 kg)</button>
+      <button class="ds-btn ds-routecap" (click)="loadBcRouteCapScenario(); submit()">🚧 Kapacitet rute (8t → ruta limit 5t)</button>
+      <button class="ds-btn ds-fuel"     (click)="loadBcFuelScenario(); submit()">⛽ Malo goriva (5% → domet 50 km, ruta 80 km)</button>
+      <button class="ds-btn ds-service"  (click)="loadBcServiceScenario(); submit()">🔧 Servis rashladnog (45 dana → max 30)</button>
+      <button class="ds-btn ds-hours"    (click)="loadBcDriverHoursScenario(); submit()">🕐 Radno vreme (6.5h + ruta 2h → prekoračuje 8h)</button>
+    </div>
+
+    <!-- ── 3. CUSTOM SCENARIO (kolapsibilno, za naprednu demo) ── -->
+    <section class="card">
+      <div class="section-header collapsible" (click)="showCustomScenario = !showCustomScenario">
+        <div class="sh-title">
+          <h3>Custom scenario</h3>
+          <span class="muted-text" style="font-size:12px;font-weight:400">Ručno definiši flotu i nalog za dijagnozu</span>
+        </div>
+        <span class="toggle-arrow">{{ showCustomScenario ? '▼' : '▶' }}</span>
+      </div>
+
+      @if (showCustomScenario) {
+
+        <div style="margin-top:12px">
+
+        <!-- Kamioni -->
+        <div class="section-header collapsible" (click)="toggle('trucks')" style="margin-bottom:6px">
+          <div class="sh-title"><h4 style="margin:0">Kamioni</h4><span class="count-pill">{{ request.trucks.length }}</span></div>
+          <div class="sh-right">
+            <button class="btn btn-add btn-sm" (click)="$event.stopPropagation(); addTruck()">+ Dodaj</button>
+            <span class="toggle-arrow">{{ collapsed.trucks ? '▶' : '▼' }}</span>
+          </div>
+        </div>
+        @if (!collapsed.trucks) {
+          <div class="table-wrap" style="margin-bottom:10px">
+            <table class="entity-table">
+              <thead><tr>
+                <th class="et-id">ID</th><th class="et-sel">Tip</th>
+                <th class="et-num">Kapacitet (kg)</th><th class="et-sel">Status</th>
+                <th class="et-check">Frigo</th><th class="et-check">ADR</th><th class="et-act"></th>
+              </tr></thead>
+              <tbody>
+                @for (t of request.trucks; track $index) {
+                  <tr>
+                    <td class="et-id"><span class="id-chip">{{ t.id }}</span></td>
+                    <td class="et-sel"><select [(ngModel)]="t.type">@for (tt of truckTypes; track tt){<option [value]="tt">{{ tt }}</option>}</select></td>
+                    <td class="et-num"><input type="number" [(ngModel)]="t.maxCapacityKg" /></td>
+                    <td class="et-sel"><select [(ngModel)]="t.status">@for (s of truckStatuses; track s){<option [value]="s">{{ s }}</option>}</select></td>
+                    <td class="et-check"><input type="checkbox" [(ngModel)]="t.hasRefrigerationUnit" /></td>
+                    <td class="et-check"><input type="checkbox" [(ngModel)]="t.hasAdrEquipment" /></td>
+                    <td class="et-act"><button class="icon-btn danger" (click)="removeTruck($index)">✕</button></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- Vozači -->
+        <div class="section-header collapsible" (click)="toggle('drivers')" style="margin-bottom:6px">
+          <div class="sh-title"><h4 style="margin:0">Vozači</h4><span class="count-pill">{{ request.drivers.length }}</span></div>
+          <div class="sh-right">
+            <button class="btn btn-add btn-sm" (click)="$event.stopPropagation(); addDriver()">+ Dodaj</button>
+            <span class="toggle-arrow">{{ collapsed.drivers ? '▶' : '▼' }}</span>
+          </div>
+        </div>
+        @if (!collapsed.drivers) {
+          <div class="table-wrap" style="margin-bottom:10px">
+            <table class="entity-table">
+              <thead><tr>
+                <th class="et-id">ID</th><th class="et-txt">Licenca</th>
+                <th class="et-num">Sati rada</th><th class="et-num">Zamor</th>
+                <th class="et-check">Dostupan</th><th class="et-check">ADR</th><th class="et-act"></th>
+              </tr></thead>
+              <tbody>
+                @for (d of request.drivers; track $index) {
+                  <tr>
+                    <td class="et-id"><span class="id-chip">{{ d.id }}</span></td>
+                    <td class="et-txt"><input [(ngModel)]="d.license" /></td>
+                    <td class="et-num"><input type="number" step="0.5" [(ngModel)]="d.workingHoursToday" /></td>
+                    <td class="et-num"><input type="number" min="0" max="10" [(ngModel)]="d.fatigueLevel" /></td>
+                    <td class="et-check"><input type="checkbox" [(ngModel)]="d.available" /></td>
+                    <td class="et-check"><input type="checkbox" [(ngModel)]="d.hasAdrLicense" /></td>
+                    <td class="et-act"><button class="icon-btn danger" (click)="removeDriver($index)">✕</button></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- Rute -->
+        <div class="section-header collapsible" (click)="toggle('routes')" style="margin-bottom:6px">
+          <div class="sh-title"><h4 style="margin:0">Rute</h4><span class="count-pill">{{ request.routes.length }}</span></div>
+          <div class="sh-right">
+            <button class="btn btn-add btn-sm" (click)="$event.stopPropagation(); addRoute()">+ Dodaj</button>
+            <span class="toggle-arrow">{{ collapsed.routes ? '▶' : '▼' }}</span>
+          </div>
+        </div>
+        @if (!collapsed.routes) {
+          <div class="table-wrap" style="margin-bottom:10px">
+            <table class="entity-table">
+              <thead><tr>
+                <th class="et-id">ID</th><th class="et-sel">Tip puta</th>
+                <th class="et-num">km</th><th class="et-check">Tunel</th><th class="et-act"></th>
+              </tr></thead>
+              <tbody>
+                @for (r of request.routes; track $index) {
+                  <tr>
+                    <td class="et-id"><span class="id-chip">{{ r.id }}</span></td>
+                    <td class="et-sel"><select [(ngModel)]="r.roadType">@for (rt of roadTypes; track rt){<option [value]="rt">{{ rt }}</option>}</select></td>
+                    <td class="et-num"><input type="number" [(ngModel)]="r.distanceKm" /></td>
+                    <td class="et-check"><input type="checkbox" [(ngModel)]="r.hasTunnel" /></td>
+                    <td class="et-act"><button class="icon-btn danger" (click)="removeRoute($index)">✕</button></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- Nalog -->
+        <div class="card order-form-card" style="margin-top:8px;padding:12px 14px">
+          <h4 style="margin:0 0 10px">Nalog za dijagnozu</h4>
+          <div class="add-order-form">
+            <div class="aof-row">
+              <label>Destinacija<input [(ngModel)]="newOrder.destination" placeholder="npr. Beograd" /></label>
+              <label>Težina (kg)<input type="number" [(ngModel)]="newOrder.weightKg" /></label>
+              <label>Tip tereta
+                <select [(ngModel)]="newOrder.cargoType">
+                  @for (t of cargoTypes; track t) { <option [value]="t">{{ t }}</option> }
+                </select>
+              </label>
+              <label>Ruta
+                <select [(ngModel)]="newOrder.routeId">
+                  @for (r of currentRoutes; track r.id) {
+                    <option [value]="r.id">{{ r.id }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+            <button class="btn btn-add" (click)="addNewOrder()" [disabled]="!newOrder.destination">+ Dodaj nalog</button>
+          </div>
+          @if (request.orders.length > 0) {
+            <div class="orders-list mt8">
+              @for (o of request.orders; track $index) {
+                <div class="order-row">
+                  <span class="id-chip">{{ o.id }}</span>
+                  <span class="order-dest">{{ o.destination }}</span>
+                  <span class="order-weight">{{ o.weightKg | number:'1.0-0' }} kg</span>
+                  <span class="badge-cargo" [class.refrigerated]="o.cargoType === 'REFRIGERATED'" [class.hazardous]="o.cargoType === 'HAZARDOUS'">{{ o.cargoType }}</span>
+                  <button class="icon-btn danger" (click)="removeOrder($index)">✕</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="form-actions-bar" style="margin-top:12px">
+          <button class="btn btn-primary btn-run"
+                  (click)="submit()"
+                  [disabled]="loading || request.orders.length === 0">
+            {{ loading ? 'Procesiranje…' : '🔍 Dijagnostikuj custom' }}
+          </button>
+          <button class="btn btn-secondary" (click)="reset()">Resetuj</button>
+        </div>
+
+        </div>
+      }
+    </section>
+
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       STATISTIKA FLOTE  (Accumulate)
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (mode === 'accumulate') {
+
+    <div class="bc-intro">
+      <p>Unesi trenutno stanje flote. Sistem će prebrojati čekajuće naloge i premorene vozače i aktivirati alarme kada se pređe prag.</p>
+    </div>
+
+    <section class="card">
+      <div class="section-header collapsible" (click)="toggle('drivers')">
+        <div class="sh-title"><h3>Vozači</h3><span class="count-pill">{{ request.drivers.length }}</span></div>
+        <div class="sh-right">
+          <button class="btn btn-add btn-sm" (click)="$event.stopPropagation(); addDriver()">+ Dodaj</button>
+          <span class="toggle-arrow">{{ collapsed.drivers ? '▶' : '▼' }}</span>
         </div>
       </div>
-    }
-  </section>
+      @if (!collapsed.drivers) {
+        <div class="table-wrap">
+          <table class="entity-table">
+            <thead><tr>
+              <th class="et-id">ID</th><th class="et-txt">Licenca</th>
+              <th class="et-num">Sati rada</th><th class="et-num">Zamor (0–10)</th>
+              <th class="et-check">Dostupan</th><th class="et-act"></th>
+            </tr></thead>
+            <tbody>
+              @for (d of request.drivers; track $index) {
+                <tr>
+                  <td class="et-id"><span class="id-chip">{{ d.id }}</span></td>
+                  <td class="et-txt"><input [(ngModel)]="d.license" /></td>
+                  <td class="et-num"><input type="number" step="0.5" [(ngModel)]="d.workingHoursToday" /></td>
+                  <td class="et-num"><input type="number" min="0" max="10" [(ngModel)]="d.fatigueLevel" /></td>
+                  <td class="et-check"><input type="checkbox" [(ngModel)]="d.available" /></td>
+                  <td class="et-act"><button class="icon-btn danger" (click)="removeDriver($index)">✕</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="card">
+      <div class="section-header collapsible" (click)="toggle('trucks')">
+        <div class="sh-title"><h3>Kamioni</h3><span class="count-pill">{{ request.trucks.length }}</span></div>
+        <div class="sh-right">
+          <button class="btn btn-add btn-sm" (click)="$event.stopPropagation(); addTruck()">+ Dodaj</button>
+          <span class="toggle-arrow">{{ collapsed.trucks ? '▶' : '▼' }}</span>
+        </div>
+      </div>
+      @if (!collapsed.trucks) {
+        <div class="table-wrap">
+          <table class="entity-table">
+            <thead><tr>
+              <th class="et-id">ID</th><th class="et-sel">Tip</th>
+              <th class="et-num">Kapacitet (kg)</th><th class="et-sel">Status</th><th class="et-act"></th>
+            </tr></thead>
+            <tbody>
+              @for (t of request.trucks; track $index) {
+                <tr>
+                  <td class="et-id"><span class="id-chip">{{ t.id }}</span></td>
+                  <td class="et-sel"><select [(ngModel)]="t.type">@for (tt of truckTypes; track tt){<option [value]="tt">{{ tt }}</option>}</select></td>
+                  <td class="et-num"><input type="number" [(ngModel)]="t.maxCapacityKg" /></td>
+                  <td class="et-sel"><select [(ngModel)]="t.status">@for (s of truckStatuses; track s){<option [value]="s">{{ s }}</option>}</select></td>
+                  <td class="et-act"><button class="icon-btn danger" (click)="removeTruck($index)">✕</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <!-- Nalozi -->
+    <section class="card">
+      <div class="section-header collapsible" (click)="toggle('orders')">
+        <div class="sh-title"><h3>Nalozi</h3><span class="count-pill">{{ request.orders.length }}</span></div>
+        <div class="sh-right">
+          <button class="btn btn-add btn-sm" (click)="$event.stopPropagation(); addOrderAcc()">+ Dodaj</button>
+          <span class="toggle-arrow">{{ collapsed.orders ? '▶' : '▼' }}</span>
+        </div>
+      </div>
+      @if (!collapsed.orders) {
+        <div class="table-wrap">
+          <table class="entity-table">
+            <thead><tr>
+              <th class="et-id">ID</th><th class="et-txt">Destinacija</th>
+              <th class="et-num">kg</th><th class="et-sel">Status</th><th class="et-act"></th>
+            </tr></thead>
+            <tbody>
+              @for (o of request.orders; track $index) {
+                <tr>
+                  <td class="et-id"><span class="id-chip">{{ o.id }}</span></td>
+                  <td class="et-txt"><input [(ngModel)]="o.destination" /></td>
+                  <td class="et-num"><input type="number" [(ngModel)]="o.weightKg" /></td>
+                  <td class="et-sel">
+                    <select [(ngModel)]="o.status">
+                      @for (s of orderStatuses; track s) { <option [value]="s">{{ s }}</option> }
+                    </select>
+                  </td>
+                  <td class="et-act"><button class="icon-btn danger" (click)="removeOrder($index)">✕</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    @if (error) { <div class="alert-error">{{ error }}</div> }
+
+    <div class="form-actions-bar">
+      <button class="btn btn-primary btn-run"
+              (click)="submit()"
+              [disabled]="loading || request.orders.length === 0">
+        {{ loading ? 'Procesiranje…' : '📊 Analiziraj' }}
+      </button>
+      <button class="btn btn-secondary" (click)="reset()">Resetuj</button>
+    </div>
+
+    <div class="demo-shortcuts">
+      <span class="ds-label">Brzi primer za demonstraciju:</span>
+      <button class="ds-btn ds-acc" (click)="loadAccumulateDemo()">📊 Preopterećena flota (6 čekajućih, 3 premorena vozača)</button>
+    </div>
+
+  }
+
 </div>

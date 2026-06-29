@@ -28,7 +28,6 @@
 .dashboard-title {
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0;
   color: #fff;
 }
 
@@ -46,18 +45,40 @@
 }
 
 .tab-btn {
-  padding: 7px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 16px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   background: transparent;
   color: #cbd5e1;
   transition: all 0.15s;
+  line-height: 1.2;
 }
+
 .tab-btn:hover { color: #e5e7eb; background: rgba(255,255,255,.08); }
-.tab-btn.active { background: #fff; color: #172033; }
+
+.tab-btn.active { background: #fff; color: #172033; font-weight: 700; }
+
+.tab-tech {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.6;
+  letter-spacing: .02em;
+}
+
+.tab-btn.active .tab-tech { opacity: 0.5; }
+
+.tab-btn.tab-fc.active    { color: #1d4ed8; }
+.tab-btn.tab-bc.active    { color: #6d28d9; }
+.tab-btn.tab-cep.active   { color: #92400e; }
+.tab-btn.tab-acc.active   { color: #065f46; }
+.tab-btn.tab-fleet.active { color: #b45309; }
 
 .dashboard-body {
   flex: 1;
@@ -74,9 +95,7 @@
   align-items: start;
 }
 
-.empty-results {
-  min-height: 420px;
-}
+.empty-results { min-height: 420px; }
 
 .empty-results-inner {
   height: 420px;
@@ -94,15 +113,65 @@
   font-size: 20px;
   line-height: 1.35;
   color: #334155;
+  margin-top: 8px;
+}
+
+.empty-hints {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.hint-item {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 13px;
+  color: #475467;
+  line-height: 1.5;
+}
+
+.hint-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.hint-dot.blue   { background: #3b82f6; }
+.hint-dot.yellow { background: #f59e0b; }
+.hint-dot.purple { background: #8b5cf6; }
+.hint-dot.green  { background: #10b981; }
+
+/* ── Feature banner (CEP only) ───────────────────────────────────────────── */
+.feature-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  border: 1px solid transparent;
+}
+.fb-label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.fb-desc { font-size: 13px; line-height: 1.5; color: #475467; }
+.fb-cep  { background: #fffbeb; border-color: #fde68a; }
+.fb-cep  .fb-label { color: #92400e; }
+
+.alarms-strip {
+  margin-top: 16px;
 }
 
 @media (max-width: 1000px) {
-  .dashboard-header {
-    align-items: stretch;
-    flex-direction: column;
-    padding: 12px;
-  }
-
+  .dashboard-header { align-items: stretch; flex-direction: column; padding: 12px; }
   .tabs { overflow-x: auto; }
   .dispatch-layout { grid-template-columns: 1fr; }
 }

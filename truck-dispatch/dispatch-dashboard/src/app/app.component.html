@@ -1,37 +1,120 @@
 <div class="dashboard">
+
   <header class="dashboard-header">
     <div class="brand">
       <h1 class="dashboard-title">TruckDispatch</h1>
-      <span>Knowledge-based fleet dispatch</span>
+      <span>Sistem za otpremu zasnovan na pravilima — Drools Rule Engine</span>
     </div>
     <nav class="tabs">
-      <button class="tab-btn" [class.active]="tab === 'dispatch'" (click)="tab = 'dispatch'">Dispatch</button>
-      <button class="tab-btn" [class.active]="tab === 'events'" (click)="tab = 'events'">Fleet Events</button>
-      <button class="tab-btn" [class.active]="tab === 'alarms'" (click)="tab = 'alarms'">Active Alarms</button>
+      <button class="tab-btn tab-fc"  [class.active]="tab === 'fc'"         (click)="tab = 'fc'">
+        Otprema
+        <span class="tab-tech">Forward Chaining</span>
+      </button>
+      <button class="tab-btn tab-bc"  [class.active]="tab === 'bc'"         (click)="tab = 'bc'">
+        Dijagnostika
+        <span class="tab-tech">Backward Chaining</span>
+      </button>
+      <button class="tab-btn tab-cep" [class.active]="tab === 'cep'"        (click)="tab = 'cep'">
+        Događaji
+        <span class="tab-tech">CEP / Fusion</span>
+      </button>
+      <button class="tab-btn tab-acc" [class.active]="tab === 'accumulate'" (click)="tab = 'accumulate'">
+        Statistika flote
+        <span class="tab-tech">Accumulate</span>
+      </button>
+      <button class="tab-btn tab-fleet" [class.active]="tab === 'fleet'" (click)="tab = 'fleet'">
+        Flota
+        <span class="tab-tech">Upravljanje</span>
+      </button>
     </nav>
   </header>
 
   <main class="dashboard-body">
-    @if (tab === 'dispatch') {
+
+    <!-- ══ Otprema (FC) ══════════════════════════════════════════════════ -->
+    @if (tab === 'fc') {
       <div class="dispatch-layout">
-        <app-dispatch-panel (resultReady)="onResult($event)" />
-        @if (result) {
-          <app-results-panel [result]="result" />
+        <app-dispatch-panel mode="fc" (resultReady)="onFcResult($event)" />
+        @if (fcResult) {
+          <app-results-panel [result]="fcResult" />
         } @else {
           <section class="panel empty-results">
             <div class="empty-results-inner">
-              <p class="eyebrow">No run yet</p>
-              <h2>Results appear here after dispatch processing.</h2>
+              <p class="eyebrow">Čeka na nalog</p>
+              <h2>Unesi nalog i klikni Dispatch</h2>
+              <div class="empty-hints">
+                <div class="hint-item"><span class="hint-dot blue"></span>Sistem automatski bira najboljeg kamiona prema tipu tereta, ruti i prioritetu</div>
+                <div class="hint-item"><span class="hint-dot blue"></span>Frigo teret → bira se kamion sa rashladnom jedinicom</div>
+                <div class="hint-item"><span class="hint-dot blue"></span>Opasna roba → obavezna ADR oprema i dozvola vozača</div>
+                <div class="hint-item"><span class="hint-dot yellow"></span>Za brzu demonstraciju — koristi primere ispod forme</div>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+      <div class="alarms-strip">
+        <app-alarms-panel />
+      </div>
+    }
+
+    <!-- ══ Dijagnostika (BC) ═════════════════════════════════════════════ -->
+    @if (tab === 'bc') {
+      <div class="dispatch-layout">
+        <app-dispatch-panel mode="bc" (resultReady)="onBcResult($event)" />
+        @if (bcResult) {
+          <app-results-panel [result]="bcResult" mode="bc" />
+        } @else {
+          <section class="panel empty-results">
+            <div class="empty-results-inner">
+              <p class="eyebrow">Čeka na dijagnozu</p>
+              <h2>Postavi scenario i klikni Dijagnostikuj</h2>
+              <div class="empty-hints">
+                <div class="hint-item"><span class="hint-dot purple"></span>BC pravila dele istu Drools sesiju sa FC pravilima — dijagnoza se izvodi automatski za svaki neuspeli nalog</div>
+                <div class="hint-item"><span class="hint-dot purple"></span>Lanac se gradi unazad: <strong>CargoOverweight → InsufficientCapacity → NoTruckAvailable → OrderUnassigned</strong></div>
+                <div class="hint-item"><span class="hint-dot purple"></span>Ovde možeš konstruisati izolovani scenario i demonstrirati sam mehanizam</div>
+                <div class="hint-item"><span class="hint-dot yellow"></span>Koristi primer ispod za brzu demonstraciju</div>
+              </div>
             </div>
           </section>
         }
       </div>
     }
-    @if (tab === 'events') {
+
+    <!-- ══ Događaji (CEP) ════════════════════════════════════════════════ -->
+    @if (tab === 'cep') {
+      <div class="feature-banner fb-cep">
+        <span class="fb-label">⚡ CEP — Drools Fusion</span>
+        <span class="fb-desc">Real-time praćenje događaja u floti — kvarovi, kašnjenja, nivo goriva. Drools Fusion obrađuje tok događaja i kreira alarme.</span>
+      </div>
       <app-cep-panel />
     }
-    @if (tab === 'alarms') {
-      <app-alarms-panel />
+
+    <!-- ══ Statistika flote (Accumulate) ════════════════════════════════ -->
+    @if (tab === 'accumulate') {
+      <div class="dispatch-layout">
+        <app-dispatch-panel mode="accumulate" (resultReady)="onAccResult($event)" />
+        @if (accResult) {
+          <app-results-panel [result]="accResult" />
+        } @else {
+          <section class="panel empty-results">
+            <div class="empty-results-inner">
+              <p class="eyebrow">Čeka na analizu</p>
+              <h2>Unesi stanje flote i klikni Analiziraj</h2>
+              <div class="empty-hints">
+                <div class="hint-item"><span class="hint-dot green"></span>Drools <code>accumulate</code> broji čekajuće naloge i premorene vozače</div>
+                <div class="hint-item"><span class="hint-dot green"></span>Kada broj pređe prag → automatski se kreira alarm</div>
+                <div class="hint-item"><span class="hint-dot yellow"></span>Koristi primer ispod za brzu demonstraciju</div>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
     }
+
+    <!-- ══ Flota (upravljanje) ════════════════════════════════════════════ -->
+    @if (tab === 'fleet') {
+      <app-fleet-management />
+    }
+
   </main>
 </div>

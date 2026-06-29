@@ -9,6 +9,7 @@ import com.truckdispatch.truck_dispatch.model.OrderPriority;
 import com.truckdispatch.truck_dispatch.model.TruckStatus;
 import com.truckdispatch.truck_dispatch.model.OperationalContext;
 import com.truckdispatch.truck_dispatch.model.CargoType;
+import com.truckdispatch.truck_dispatch.model.RoadType;
 
 global java.util.List messages;
 
@@ -131,4 +132,43 @@ rule "CargoType_Weekend_OnlyUrgentAndHigh"
     then
         modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
         messages.add("Weekend mode: order " + $order.getId() + " postponed — only URGENT and HIGH orders dispatched on weekends");
+end
+
+// Opasan teret zabranjen u gradskim zonama (zakonska regulativa ADR u urbanim sredinama)
+rule "Validation_Hazardous_CityRoute"
+    salience 869
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, cargoType == CargoType.HAZARDOUS)
+        $route : Route(id == $order.routeId, roadType == RoadType.CITY)
+    then
+        modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
+        messages.add("Order " + $order.getId()
+            + " UNFEASIBLE — ADR teret zabranjen u gradskoj zoni (ruta " + $route.getId()
+            + " tip CITY). Izaberi regionalnu ili magistralnu trasu.");
+end
+
+// Ruta nema dovoljno kapaciteta za ovaj teret (npr. lokalni put sa ograničenjem mase)
+rule "Validation_RouteCapacityExceeded"
+    salience 875
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, $weight : weightKg)
+        $route : Route(id == $order.routeId, maxCapacityKg < $weight)
+    then
+        modify($order) { setStatus(OrderStatus.UNFEASIBLE); }
+        messages.add("Order " + $order.getId() + " UNFEASIBLE — ruta " + $route.getId()
+            + " dozvoljava max " + $route.getMaxCapacityKg() + " kg, a teret je "
+            + $weight + " kg. Izaberi drugu trasu.");
+end
+
+// Procenjeno vreme rute premašuje rok dostave
+rule "Validation_DeadlineMiss"
+    salience 872
+    when
+        $order : DeliveryOrder(status == OrderStatus.VALID, $deadline : deliveryDeadlineMin, deliveryDeadlineMin > 0)
+        $route : Route(id == $order.routeId, estimatedTimeHours * 60.0 > $deadline)
+    then
+        modify($order) { setStatus(OrderStatus.WAITING_RESOURCES); }
+        messages.add("Order " + $order.getId() + " WAITING — ruta " + $route.getId()
+            + " traje ~" + (int)($route.getEstimatedTimeHours() * 60) + " min"
+            + ", rok dostave je samo " + $deadline + " min. Izaberi bržu trasu ili produži rok.");
 end

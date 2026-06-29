@@ -8,7 +8,10 @@ import com.truckdispatch.truck_dispatch.model.Route;
 import com.truckdispatch.truck_dispatch.model.DispatchContext;
 import com.truckdispatch.truck_dispatch.model.TruckType;
 import com.truckdispatch.truck_dispatch.model.CargoType;
+import com.truckdispatch.truck_dispatch.model.RoadType;
+import com.truckdispatch.truck_dispatch.model.OrderPriority;
 import com.truckdispatch.truck_dispatch.model.OperationalContext;
+import com.truckdispatch.truck_dispatch.model.OrderStatus;
 
 global java.util.List messages;
 
@@ -129,4 +132,91 @@ rule "Score_MalusFragile_FastRoute"
         $route : Route(id == $order.routeId, maxSpeedKmh > 80)
     then
         modify($pair) { setScore($pair.getScore() - 20); }
+end
+
+// -15: vozač se bliži maksimumu radnih sati (6–8h) — preferiraj odmornijeg vozača
+rule "Score_MalusDriverNearHoursLimit"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($driver : driver)
+        Driver(this == $driver, workingHoursToday >= 6.0, workingHoursToday < 8.0)
+    then
+        modify($pair) { setScore($pair.getScore() - 15); }
+end
+
+// -20: osetljivi teret (REFRIGERATED/FRAGILE) na dugoj ruti (>2h) — kvalitet i temperatura
+rule "Score_MalusSensitiveCargo_LongRoute"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($order : order)
+        DeliveryOrder(this == $order,
+            cargoType == CargoType.REFRIGERATED || cargoType == CargoType.FRAGILE)
+        Route(id == $order.routeId, estimatedTimeHours > 2.0)
+    then
+        modify($pair) { setScore($pair.getScore() - 20); }
+        messages.add("Warning: " + $order.getCargoType() + " order " + $order.getId()
+            + " on long route (>2h) — quality/temperature risk (malus -20)");
+end
+
+// -15: velika iskorišćenost tipa kamiona za mali teret (< 20% kapaciteta)
+// Ekonomski neefikasno — preferiramo manji kamion koji pristaje bolji teret
+rule "Score_MalusLowUtilization"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($order : order, $truck : truck)
+        DeliveryOrder(this == $order, $weight : weightKg)
+        Truck(this == $truck, maxCapacityKg * 0.20 > $weight)
+    then
+        modify($pair) { setScore($pair.getScore() - 15); }
+        messages.add("Truck " + $truck.getId() + " underutilized for order "
+            + $order.getId() + " (" + $weight + " kg / " + $truck.getMaxCapacityKg()
+            + " kg capacity = " + (int)(100.0 * $weight / $truck.getMaxCapacityKg()) + "%) (malus -15)");
+end
+
+// -15: lomljivi teret na gradskom/lokalnom putu — česta kočenja i neravnine oštećuju teret
+rule "Score_MalusFragile_BumpyRoad"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($order : order)
+        DeliveryOrder(this == $order, cargoType == CargoType.FRAGILE)
+        Route(id == $order.routeId, roadType == RoadType.CITY || roadType == RoadType.LOCAL)
+    then
+        modify($pair) { setScore($pair.getScore() - 15); }
+        messages.add("FRAGILE order " + $order.getId()
+            + " on CITY/LOCAL road — frequent stops and bumps increase damage risk (malus -15)");
+end
+
+// -20: CRITICAL_DELIVERY nalog + daleki kamion (> 50 km) — kašnjenje pri preuzimanju
+rule "Score_MalusCritical_DistantTruck"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($order : order, $truck : truck)
+        DeliveryOrder(this == $order,
+            priority == OrderPriority.CRITICAL_DELIVERY)
+        Truck(this == $truck, distanceToOriginKm > 50)
+    then
+        modify($pair) { setScore($pair.getScore() - 20); }
+        messages.add("CRITICAL order " + $order.getId() + ": truck " + $truck.getId()
+            + " is " + $truck.getDistanceToOriginKm() + " km away — pickup delay risk (malus -20)");
+end
+
+// -30: kamion ima aktivan nalog koji kasni — ne opterećuj ga novim zadatkom
+rule "Score_MalusDelayedTruck"
+    salience 600
+    no-loop true
+    when
+        $pair : ValidPair($truck : truck)
+        exists DeliveryOrder(
+            assignedTruckId == $truck.getId(),
+            status == OrderStatus.IN_PROGRESS,
+            delayMin > 0
+        )
+    then
+        modify($pair) { setScore($pair.getScore() - 30); }
+        messages.add("Warning: truck " + $truck.getId() + " has delayed active order (score malus -30)");
 end

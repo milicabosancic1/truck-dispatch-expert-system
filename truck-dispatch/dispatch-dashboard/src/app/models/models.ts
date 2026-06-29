@@ -5,9 +5,11 @@ export type OrderStatus = 'NEW' | 'VALID' | 'UNFEASIBLE' | 'ASSIGNED' | 'IN_PROG
 export type TruckType = 'SMALL' | 'MEDIUM' | 'LARGE';
 export type TruckStatus = 'AVAILABLE' | 'BUSY' | 'BREAKDOWN' | 'SERVICE';
 export type RoadType = 'CITY' | 'LOCAL' | 'REGIONAL' | 'HIGHWAY';
-export type FleetEventType = 'DELAY' | 'POSITION' | 'BREAKDOWN' | 'FUEL_LEVEL' | 'NEW_ORDER';
+export type FleetEventType = 'DELAY' | 'POSITION' | 'BREAKDOWN' | 'FUEL_LEVEL' | 'NEW_ORDER'
+  | 'TRIP_STARTED' | 'UNLOADING_STARTED' | 'DELIVERY_CONFIRMED';
 export type AlarmType = 'ESCALATION' | 'VEHICLE_STOPPED' | 'EMERGENCY_REPLACEMENT' | 'FUEL_LEAK' |
-  'DOMINO_ESCALATION' | 'OVERLOADED_DRIVER' | 'OVERLOADED_TRUCK' | 'PROBLEMATIC_ROUTE' | 'SHIFT_WARNING' | 'IDLE_FLEET';
+  'DOMINO_ESCALATION' | 'OVERLOADED_DRIVER' | 'OVERLOADED_TRUCK' | 'PROBLEMATIC_ROUTE' | 'SHIFT_WARNING' |
+  'FLEET_SHORTAGE' | 'ORDER_BACKLOG' | 'ORDER_SPIKE';
 
 export interface DeliveryOrder {
   id: string;

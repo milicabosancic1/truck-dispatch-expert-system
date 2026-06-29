@@ -3,6 +3,8 @@ package rules;
 import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
 import com.truckdispatch.truck_dispatch.model.Truck;
 import com.truckdispatch.truck_dispatch.model.Driver;
+import com.truckdispatch.truck_dispatch.model.Route;
+import com.truckdispatch.truck_dispatch.model.RoadType;
 import com.truckdispatch.truck_dispatch.model.DispatchContext;
 import com.truckdispatch.truck_dispatch.model.RejectionReason;
 import com.truckdispatch.truck_dispatch.model.OrderGroupMembership;
@@ -149,6 +151,81 @@ rule "Diagnose_WeekendRestriction"
         DispatchContext( context == OperationalContext.WEEKEND )
     then
         insert( new RejectionReason( $id, "WeekendRestriction", "OrderUnassigned" ) );
+end
+
+// ADR teret zabranjen u gradskoj zoni (ruta tip CITY)
+rule "Diagnose_HazardousCityRoute"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE, $id : id,
+                                cargoType == CargoType.HAZARDOUS )
+        Route( id == $order.routeId, roadType == RoadType.CITY )
+    then
+        insert( new RejectionReason( $id, "HazardousCityRoute", "OrderUnassigned" ) );
+end
+
+// Svi kamioni koji bi mogli nositi teret nemaju dovoljno goriva za ovu rutu
+rule "Diagnose_AllTrucksLowFuelForRoute"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id, $weight : weightKg )
+        Route( id == $order.routeId, $dist : distanceKm )
+        not Truck( status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight, fuelPercent * 10 >= $dist )
+        exists Truck( status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight )
+    then
+        insert( new RejectionReason( $id, "InsufficientFuelForRoute", "NoTruckAvailable" ) );
+end
+
+// Svi dostupni vozači bi prekoračili 8h radnog vremena da preuzmu ovu rutu
+rule "Diagnose_DriverWouldExceedWorkingHours"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id )
+        Route( id == $order.routeId, $routeHours : estimatedTimeHours )
+        exists Driver( available == true )
+        not Driver( available == true, workingHoursToday + $routeHours <= 8.0 )
+    then
+        insert( new RejectionReason( $id, "DriverWouldExceedWorkingHours", "NoDriverAvailable" ) );
+end
+
+// Svi rashladni kamioni imaju prekoračen interval servisa
+rule "Diagnose_RefrigerationServiceOverdue"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id,
+                                cargoType == CargoType.REFRIGERATED )
+        not Truck( status == TruckStatus.AVAILABLE, hasRefrigerationUnit == true,
+                   daysSinceRefrigerationService <= 30 )
+        exists Truck( status == TruckStatus.AVAILABLE, hasRefrigerationUnit == true )
+    then
+        insert( new RejectionReason( $id, "RefrigerationServiceOverdue", "NoTruckAvailable" ) );
+end
+
+// Ruta ima niži weight limit od težine tereta (npr. lokalni/planinski put)
+rule "Diagnose_RouteCapacityExceeded"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE, $id : id, $weight : weightKg )
+        Route( id == $order.routeId, maxCapacityKg < $weight )
+    then
+        insert( new RejectionReason( $id, "RouteCapacityExceeded", "InsufficientCapacity" ) );
+end
+
+// Procenjeno vreme rute premašuje rok dostave naloga
+rule "Diagnose_RouteTooSlowForDeadline"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id,
+                                $deadline : deliveryDeadlineMin, deliveryDeadlineMin > 0 )
+        Route( id == $order.routeId, estimatedTimeHours * 60.0 > $deadline )
+    then
+        insert( new RejectionReason( $id, "RouteTooSlowForDeadline", "OrderUnassigned" ) );
 end
 
 

@@ -1,7 +1,9 @@
 package com.truckdispatch.truck_dispatch.controller;
 
+import com.truckdispatch.truck_dispatch.config.DefaultFleetSeeder;
 import com.truckdispatch.truck_dispatch.dto.DispatchRequest;
 import com.truckdispatch.truck_dispatch.dto.DispatchResult;
+import com.truckdispatch.truck_dispatch.dto.FleetSaveRequest;
 import com.truckdispatch.truck_dispatch.model.Alarm;
 import com.truckdispatch.truck_dispatch.model.FleetEvent;
 import com.truckdispatch.truck_dispatch.service.CepService;
@@ -68,6 +70,42 @@ public class DispatchController {
     }
 
     /**
+     * POST /api/dispatch/reset-fleet
+     * Restores the default seeded fleet and clears all accumulated orders.
+     * Called from the frontend Reset button so demos always start from a clean state.
+     */
+    @PostMapping("/reset-fleet")
+    public ResponseEntity<Map<String, Object>> resetFleet() {
+        fleetState.replaceTrucks(DefaultFleetSeeder.defaultTrucks());
+        fleetState.replaceDrivers(DefaultFleetSeeder.defaultDrivers());
+        fleetState.replaceRoutes(DefaultFleetSeeder.defaultRoutes());
+        fleetState.clearOrders();
+        Map<String, Object> state = new LinkedHashMap<>();
+        state.put("trucks",  fleetState.getTrucks());
+        state.put("drivers", fleetState.getDrivers());
+        state.put("routes",  fleetState.getRoutes());
+        state.put("orders",  fleetState.getOrders());
+        return ResponseEntity.ok(state);
+    }
+
+    /**
+     * PUT /api/dispatch/fleet
+     * Saves the full fleet (trucks, drivers, routes) from the Fleet Management tab.
+     * Replaces the current fleet in memory and in the H2 database.
+     */
+    @PutMapping("/fleet")
+    public ResponseEntity<Map<String, Object>> saveFleet(@RequestBody FleetSaveRequest req) {
+        if (!req.getTrucks().isEmpty())  fleetState.replaceTrucks(req.getTrucks());
+        if (!req.getDrivers().isEmpty()) fleetState.replaceDrivers(req.getDrivers());
+        if (!req.getRoutes().isEmpty())  fleetState.replaceRoutes(req.getRoutes());
+        Map<String, Object> state = new LinkedHashMap<>();
+        state.put("trucks",  fleetState.getTrucks());
+        state.put("drivers", fleetState.getDrivers());
+        state.put("routes",  fleetState.getRoutes());
+        return ResponseEntity.ok(state);
+    }
+
+    /**
      * GET /api/dispatch/fleet
      * Returns the current fleet state as tracked by the system
      * (trucks with live statuses, active orders, available drivers).
@@ -77,6 +115,7 @@ public class DispatchController {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("trucks",  fleetState.getTrucks());
         state.put("drivers", fleetState.getDrivers());
+        state.put("routes",  fleetState.getRoutes());
         state.put("orders",  fleetState.getOrders());
         return ResponseEntity.ok(state);
     }

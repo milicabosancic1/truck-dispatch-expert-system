@@ -1,0 +1,194 @@
+.fleet-mgmt {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.fm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.fm-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+.fm-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #718096;
+}
+.fm-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.save-ok  { color: #276749; font-size: 0.85rem; font-weight: 600; }
+.save-err { color: #c53030; font-size: 0.85rem; font-weight: 600; }
+
+/* ── Buttons ── */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary   { background: #3182ce; color: #fff; }
+.btn-primary:hover:not(:disabled)   { background: #2b6cb0; }
+.btn-secondary { background: #e2e8f0; color: #2d3748; }
+.btn-secondary:hover:not(:disabled) { background: #cbd5e0; }
+.btn-add { background: #38a169; color: #fff; }
+.btn-add:hover { background: #2f855a; }
+.btn-save { min-width: 140px; }
+
+.icon-btn {
+  border: none; background: transparent; cursor: pointer;
+  border-radius: 4px; padding: 3px 7px; font-size: 0.8rem;
+  transition: background 0.15s;
+}
+.icon-btn.danger { color: #e53e3e; }
+.icon-btn.danger:hover { background: #fff5f5; color: #c53030; }
+
+/* ── Loading ── */
+.fm-loading { padding: 48px; text-align: center; color: #a0aec0; font-size: 1rem; }
+
+/* ── Sections ── */
+.fm-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.fm-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.fm-section-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ebf8ff;
+  color: #2b6cb0;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ── Tables ── */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+.entity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  background: #fff;
+}
+.entity-table thead { background: #f7fafc; }
+.entity-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: #4a5568;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.entity-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #f0f4f8;
+  vertical-align: middle;
+}
+.entity-table tr:last-child td { border-bottom: none; }
+.entity-table tr:hover td { background: #f7fafc; }
+
+/* column width hints */
+.et-id    { width: 80px; }
+.et-sel   { width: 120px; }
+.et-num   { width: 100px; }
+.et-txt   { width: 130px; }
+.et-check { width: 60px; text-align: center; }
+.et-act   { width: 44px; text-align: center; }
+
+/* table inputs */
+.entity-table input[type="text"],
+.entity-table input[type="number"],
+.entity-table input.id-input,
+.entity-table select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  background: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.entity-table input:focus,
+.entity-table select:focus {
+  outline: none;
+  border-color: #63b3ed;
+  box-shadow: 0 0 0 2px rgba(99,179,237,0.25);
+}
+.entity-table input[type="checkbox"] {
+  width: 15px; height: 15px; cursor: pointer; margin: 0;
+}
+.id-input { font-family: monospace; font-size: 0.8rem; }
+
+/* ── Empty state ── */
+.fm-empty {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: #a0aec0;
+  text-align: center;
+  padding: 8px 0;
+}
+
+/* ── H2 hint ── */
+.h2-hint {
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.h2-hint a { color: #3182ce; text-decoration: none; font-weight: 600; }
+.h2-hint a:hover { text-decoration: underline; }
+.muted-text { color: #718096; }
+.h2-hint code {
+  background: #edf2f7;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.78rem;
+}

@@ -2,42 +2,35 @@
   <div class="panel-header">
     <div>
       <p class="eyebrow">Monitoring</p>
-      <h2>Active Alarms</h2>
+      <h2>Aktivni alarmi</h2>
     </div>
     <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">
-      {{ loading ? 'Loading...' : 'Refresh' }}
+      {{ loading ? 'Učitava…' : '↻ Osveži' }}
     </button>
   </div>
 
-  @if (error) {
-    <div class="alert-error">{{ error }}</div>
-  }
+  @if (error) { <div class="alert-error">{{ error }}</div> }
 
   <section class="card">
     <div class="section-header">
-      <h3>Alarm list</h3>
-      <p class="section-meta">{{ alarms.length }} active alarms</p>
+      <h3>Lista alarma</h3>
+      <p class="section-meta">{{ alarms.length }} aktivnih alarma</p>
     </div>
     @if (alarms.length === 0 && !loading) {
-      <p class="empty-state compact-empty">No active alarms.</p>
+      <p class="empty-state compact-empty">Nema aktivnih alarma.</p>
     } @else {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>
-              <th>Type</th>
-              <th>Entity</th>
-              <th>Message</th>
-              <th>Affected</th>
-            </tr>
+            <tr><th>Tip</th><th>Entitet</th><th>Poruka</th><th>Broj</th></tr>
           </thead>
           <tbody>
             @for (alarm of alarms; track $index) {
               <tr>
-                <td><span class="badge badge-alarm">{{ alarm.type }}</span></td>
+                <td><span class="badge badge-alarm-{{ alarm.type.toLowerCase() }}">{{ alarm.type }}</span></td>
                 <td class="strong-cell">{{ alarm.entityId }}</td>
                 <td>{{ alarm.message }}</td>
-                <td>{{ alarm.affectedCount }}</td>
+                <td>{{ alarm.affectedCount > 0 ? alarm.affectedCount : '—' }}</td>
               </tr>
             }
           </tbody>

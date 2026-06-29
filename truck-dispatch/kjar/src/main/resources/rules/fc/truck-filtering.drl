@@ -80,6 +80,37 @@ rule "ExcludeNoAdrEquipmentForDangerous"
         messages.add("Truck " + $candidate.getTruck().getId() + " excluded - no ADR equipment");
 end
 
+// Iskljuci kamion ako procenjeni domet (fuelPercent * 10 km) nije dovoljan za rutu
+// Pretpostavka: pun rezervoar = 1000 km; na X% goriva domet je X*10 km
+rule "ExcludeTruck_InsufficientFuelForRoute"
+    salience 790
+    when
+        $candidate : CandidateTruck($truck : truck, $order : order)
+        Route(id == $order.routeId, $dist : distanceKm)
+        Truck(this == $truck, $fuel : fuelPercent, fuelPercent * 10 < $dist)
+    then
+        retract($candidate);
+        messages.add("Truck " + $truck.getId() + " excluded — fuel " + $fuel
+            + "% (range ~" + ((int)($fuel * 10)) + " km) insufficient for "
+            + $dist + " km route");
+end
+
+// Iskljuci kamion sa prekasnim servisom rashladnog sistema za REFRIGERATED nalog
+// Post-validacija samo upozorava nakon dodele; ovo pravilo sprečava pogrešnu dodelu
+rule "ExcludeRefrigerationServiceOverdue"
+    salience 790
+    when
+        $candidate : CandidateTruck(
+            order.cargoType == CargoType.REFRIGERATED,
+            truck.daysSinceRefrigerationService > 30
+        )
+    then
+        retract($candidate);
+        messages.add("Truck " + $candidate.getTruck().getId()
+            + " excluded — refrigeration system not serviced in "
+            + $candidate.getTruck().getDaysSinceRefrigerationService() + " days (max 30)");
+end
+
 // Iskljuci kamione ispod minimalnog tipa koji nalog zahteva
 rule "ExcludeTruckBelowMinType"
     salience 790
