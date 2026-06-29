@@ -1,0 +1,6 @@
+contextEnum,contextLabel,severityTag
+MORNING_PEAK,Morning Peak,WARN
+EVENING_PEAK,Evening Peak,WARN
+NIGHT_MODE,Night Mode,ALERT
+WEEKEND,Weekend,INFO
+WINTER_CONDITIONS,Winter Conditions,WARN

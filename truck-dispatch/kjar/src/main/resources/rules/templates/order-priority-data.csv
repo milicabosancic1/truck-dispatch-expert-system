@@ -1,0 +1,5 @@
+priorityEnum,priorityLabel,urgencyTag
+NORMAL,Normal,INFO
+HIGH,High Priority,WARN
+URGENT,Urgent,ALERT
+CRITICAL_DELIVERY,Critical Delivery,CRITICAL

@@ -25,10 +25,10 @@ enum TruckStatus {
 }
 
 enum CargoType {
-    STANDARDNO
-    RASHLADNI
-    OPASNA_ROBA
-    LOMLJIVO
+    STANDARD
+    REFRIGERATED
+    HAZARDOUS
+    FRAGILE
 }
 
 enum OrderStatus {
@@ -85,7 +85,8 @@ enum AlarmType {
     OVERLOADED_TRUCK
     PROBLEMATIC_ROUTE
     SHIFT_WARNING
-    IDLE_FLEET
+    FLEET_SHORTAGE
+    ORDER_BACKLOG
 }
 
 ' ============================================================

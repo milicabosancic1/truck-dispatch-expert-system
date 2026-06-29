@@ -14,7 +14,7 @@ import com.truckdispatch.truck_dispatch.model.TruckStatus;
 
 global java.util.List messages;
 
-// Deklarisanje FleetEvent kao CEP dogadjaj (umjesto Java anotacija)
+// Deklarisanje FleetEvent kao CEP dogadjaj (umesto Java anotacija)
 declare FleetEvent
     @role(event)
     @timestamp(timestamp)

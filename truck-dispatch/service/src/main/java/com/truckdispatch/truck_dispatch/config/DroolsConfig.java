@@ -1,6 +1,7 @@
 package com.truckdispatch.truck_dispatch.config;
 
-import org.drools.template.ObjectDataCompiler;
+import org.drools.template.DataProviderCompiler;
+import org.drools.template.objects.ArrayDataProvider;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
@@ -11,11 +12,13 @@ import org.kie.api.runtime.KieContainer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Configuration
 public class DroolsConfig {
@@ -34,34 +37,9 @@ public class DroolsConfig {
         "rules/cep/lifecycle.drl"
     };
 
-    // Tip kamiona × tip rute → score bonus (generisano iz template-a)
-    private static final List<Map<String, Object>> TRUCK_TYPE_DATA = List.of(
-        Map.of("truckType", "SMALL",  "routeType", "CITY",     "scoreBonus", 15),
-        Map.of("truckType", "SMALL",  "routeType", "LOCAL",    "scoreBonus", 10),
-        Map.of("truckType", "SMALL",  "routeType", "REGIONAL", "scoreBonus", 5),
-        Map.of("truckType", "MEDIUM", "routeType", "LOCAL",    "scoreBonus", 10),
-        Map.of("truckType", "MEDIUM", "routeType", "REGIONAL", "scoreBonus", 15),
-        Map.of("truckType", "MEDIUM", "routeType", "HIGHWAY",  "scoreBonus", 10),
-        Map.of("truckType", "LARGE",  "routeType", "REGIONAL", "scoreBonus", 10),
-        Map.of("truckType", "LARGE",  "routeType", "HIGHWAY",  "scoreBonus", 15)
-    );
-
-    // Prioritet naloga → alert nivo kada nalog čeka resurse (generisano iz template-a)
-    private static final List<Map<String, Object>> ORDER_PRIORITY_DATA = List.of(
-        Map.of("priorityEnum", "NORMAL",            "priorityLabel", "Normal",           "urgencyTag", "INFO"),
-        Map.of("priorityEnum", "HIGH",              "priorityLabel", "High Priority",    "urgencyTag", "WARN"),
-        Map.of("priorityEnum", "URGENT",            "priorityLabel", "Urgent",           "urgencyTag", "ALERT"),
-        Map.of("priorityEnum", "CRITICAL_DELIVERY", "priorityLabel", "Critical Delivery","urgencyTag", "CRITICAL")
-    );
-
-    // Operativni kontekst → alert kada nalog kasni više od praga (generisano iz template-a)
-    private static final List<Map<String, Object>> OPERATIONAL_MODE_DATA = List.of(
-        Map.of("contextEnum", "MORNING_PEAK",      "contextLabel", "Morning Peak",      "severityTag", "WARN"),
-        Map.of("contextEnum", "EVENING_PEAK",      "contextLabel", "Evening Peak",      "severityTag", "WARN"),
-        Map.of("contextEnum", "NIGHT_MODE",        "contextLabel", "Night Mode",        "severityTag", "ALERT"),
-        Map.of("contextEnum", "WEEKEND",           "contextLabel", "Weekend",           "severityTag", "INFO"),
-        Map.of("contextEnum", "WINTER_CONDITIONS", "contextLabel", "Winter Conditions", "severityTag", "WARN")
-    );
+    private static final String CSV_TRUCK_TYPE       = "rules/templates/truck-type-data.csv";
+    private static final String CSV_ORDER_PRIORITY   = "rules/templates/order-priority-data.csv";
+    private static final String CSV_OPERATIONAL_MODE = "rules/templates/operational-mode-data.csv";
 
     @Bean
     public KieContainer kieContainer() throws IOException {
@@ -88,9 +66,9 @@ public class DroolsConfig {
         }
 
         // Generiši pravila iz DRL template-a i dodaj u KieFileSystem
-        writeGeneratedDrl(kfs, ks, TRUCK_TYPE_DATA,       "/rules/templates/truck-type.drt",       "rules/truck-type-scoring.drl");
-        writeGeneratedDrl(kfs, ks, ORDER_PRIORITY_DATA,   "/rules/templates/order-priority.drt",   "rules/order-priority-alerts.drl");
-        writeGeneratedDrl(kfs, ks, OPERATIONAL_MODE_DATA, "/rules/templates/operational-mode.drt", "rules/operational-mode-alerts.drl");
+        writeGeneratedDrl(kfs, ks, loadCsvRows(CSV_TRUCK_TYPE),       "/rules/templates/truck-type.drt",       "rules/truck-type-scoring.drl");
+        writeGeneratedDrl(kfs, ks, loadCsvRows(CSV_ORDER_PRIORITY),   "/rules/templates/order-priority.drt",   "rules/order-priority-alerts.drl");
+        writeGeneratedDrl(kfs, ks, loadCsvRows(CSV_OPERATIONAL_MODE), "/rules/templates/operational-mode.drt", "rules/operational-mode-alerts.drl");
 
         // Kompajliraj
         KieBuilder kb = ks.newKieBuilder(kfs).buildAll();
@@ -102,17 +80,36 @@ public class DroolsConfig {
         return ks.newKieContainer(kb.getKieModule().getReleaseId());
     }
 
+    // Čita CSV fajl i vraća podatke kao 2D String niz (bez header reda).
+    // Kolone su u istom redosledu kao template header promenljive.
+    private String[][] loadCsvRows(String path) throws IOException {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(path)) {
+            if (is == null) throw new IOException("CSV nije pronađen: " + path);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+            reader.readLine(); // preskoči header red
+            List<String[]> rows = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                rows.add(line.split(","));
+            }
+            return rows.toArray(new String[0][]);
+        }
+    }
+
     private void writeGeneratedDrl(KieFileSystem kfs,
-                                   org.kie.api.KieServices ks,
-                                   List<Map<String, Object>> data,
+                                   KieServices ks,
+                                   String[][] data,
                                    String templatePath,
                                    String outputPath) throws IOException {
-        ObjectDataCompiler compiler = new ObjectDataCompiler();
+        DataProviderCompiler compiler = new DataProviderCompiler();
+        ArrayDataProvider dataProvider = new ArrayDataProvider(data);
         try (InputStream tpl = getClass().getResourceAsStream(templatePath)) {
             if (tpl == null) {
                 throw new IOException("Template nije pronađen: " + templatePath);
             }
-            String generated = compiler.compile(data, tpl);
+            String generated = compiler.compile(dataProvider, tpl);
             kfs.write("src/main/resources/" + outputPath,
                     ks.getResources()
                       .newByteArrayResource(generated.getBytes(StandardCharsets.UTF_8))

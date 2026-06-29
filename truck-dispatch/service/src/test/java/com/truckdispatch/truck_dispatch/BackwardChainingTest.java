@@ -21,7 +21,7 @@ class BackwardChainingTest {
     @Autowired
     private DispatchService dispatchService;
 
-    // ---- builders ----
+    // ---- pomoćne metode ----
 
     private Truck truck(String id, TruckType type, double cap, TruckStatus status,
                         boolean frigo, boolean adr, double fuel, double dist) {
@@ -75,7 +75,7 @@ class BackwardChainingTest {
                 .filter(o -> o.getId().equals(id)).findFirst().orElseThrow();
     }
 
-    // ── Query 1: isCauseOfRejection ───────────────────────────────────────────
+    // ── Upit 1: isCauseOfRejection ────────────────────────────────────────────
 
     @Nested
     @DisplayName("isCauseOfRejection — recursive diagnosis chain")
@@ -125,7 +125,7 @@ class BackwardChainingTest {
         void noWinterDiagnosisWhenTempPositive() {
             // Isti scenario kao gore ali temp=+15 → bez zimskog konteksta.
             // Stara implementacija bi pogrešno prikazivala 'WinterReducesCapacity' jer je imala globalnu
-            // statičku bazu. Nova implementacija to NE smije prikazati.
+            // statičku bazu. Nova implementacija to NE sme prikazati.
             Truck  t = truck("T1", TruckType.SMALL, 1000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
@@ -143,7 +143,7 @@ class BackwardChainingTest {
         @Test
         @DisplayName("BC_Diagnosis_AllCauses: CargoOverweight 3-hop chain — svi cvorovi se prijavljuju")
         void diagnosisAllCausesCargoOverweightChain() {
-            // temp=15 (bez zime), kamion 1000 kg, nalog 5000 kg → UNFEASIBLE zbog prekomjerne tezine.
+            // temp=15 (bez zime), kamion 1000 kg, nalog 5000 kg → UNFEASIBLE zbog prekomerne tezine.
             // Rekurzivni query vraca sve cvorove koji transitivno vode do OrderUnassigned:
             //   CargoOverweight (3 hopa) → InsufficientCapacity (2 hopa) → NoTruckAvailable (1 hop)
             Truck  t = truck("T1", TruckType.SMALL, 1000, TruckStatus.AVAILABLE, false, false, 80, 5);
@@ -165,7 +165,7 @@ class BackwardChainingTest {
             assertThat(res.getMessages())
                     .anyMatch(m -> m.contains("O1") && m.contains("DIAGNOSIS cause: NoTruckAvailable"));
 
-            // NE smije prikazati uzroke koji nisu stvarno aktivni za ovaj nalog
+            // NE sme prikazati uzroke koji nisu stvarno aktivni za ovaj nalog
             assertThat(res.getMessages()).noneMatch(m -> m.contains("WinterReducesCapacity"));
             assertThat(res.getMessages()).noneMatch(m -> m.contains("AllDriversFatigued"));
         }
@@ -189,7 +189,7 @@ class BackwardChainingTest {
                     .anyMatch(m -> m.contains("DIAGNOSIS cause: InsufficientCapacity"));
             assertThat(res.getMessages())
                     .anyMatch(m -> m.contains("DIAGNOSIS cause: NoTruckAvailable"));
-            // CargoOverweight NE smije biti prikazan — bez zime bi truck 6000 >= 5500 prosao
+            // CargoOverweight NE sme biti prikazan — bez zime bi truck 6000 >= 5500 prosao
             assertThat(res.getMessages()).noneMatch(m -> m.contains("CargoOverweight"));
         }
 
@@ -211,7 +211,7 @@ class BackwardChainingTest {
                     .anyMatch(m -> m.contains("O1") && m.contains("DIAGNOSIS cause: AllDriversFatigued"));
             assertThat(res.getMessages())
                     .anyMatch(m -> m.contains("O1") && m.contains("DIAGNOSIS cause: NoDriverAvailable"));
-            // NE smije prijaviti uzroke kapaciteta — kamion je prosao
+            // NE sme prijaviti uzroke kapaciteta — kamion je prosao
             assertThat(res.getMessages()).noneMatch(m -> m.contains("NoTruckAvailable"));
         }
 
@@ -289,7 +289,7 @@ class BackwardChainingTest {
         @Test
         @DisplayName("BC_Diagnosis does NOT fire when order is ASSIGNED")
         void noDiagnosisForAssignedOrder() {
-            // Negativan test — BC dijagnostika se ne smije okidati za uspjesno dodijeljene naloge.
+            // Negativan test — BC dijagnostika se ne sme okidati za uspešno dodeljene naloge.
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
@@ -327,7 +327,7 @@ class BackwardChainingTest {
         }
     }
 
-    // ── Query 2: belongsToOrderCategory ──────────────────────────────────────
+    // ── Upit 2: belongsToOrderCategory ───────────────────────────────────────
 
     @Nested
     @DisplayName("belongsToOrderCategory — order group hierarchy")
@@ -377,10 +377,10 @@ class BackwardChainingTest {
         }
 
         @Test
-        @DisplayName("REFRIGERATED UNFEASIBLE — BC_SpecialOrderCheck se ne smije okidati")
+        @DisplayName("REFRIGERATED UNFEASIBLE — BC_SpecialOrderCheck se ne sme okidati")
         void refrigeratedUnfeasibleSkipsSpecialCheck() {
             // Bez frigo kamiona nalog postaje UNFEASIBLE, nikad ne doseze ASSIGNED.
-            // BC_SpecialOrderCheck zahtijeva status == ASSIGNED, pa se ne smije okidati.
+            // BC_SpecialOrderCheck zahteva status == ASSIGNED, pa se ne sme okidati.
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);

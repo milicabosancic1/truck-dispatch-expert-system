@@ -20,7 +20,7 @@ class DominoTest {
     @Autowired
     private DispatchService dispatchService;
 
-    // ---- builders ----
+    // ---- pomoćne metode ----
 
     private Truck truck(String id, TruckStatus status, double cap) {
         Truck t = new Truck();
@@ -31,7 +31,7 @@ class DominoTest {
         return t;
     }
 
-    // IN_PROGRESS order with delay — the primary cause of domino
+    // Nalog u statusu IN_PROGRESS sa kašnjenjem — primarni uzrok domino efekta
     private DeliveryOrder delayed(String id, String truckId, int delayMin) {
         DeliveryOrder o = new DeliveryOrder();
         o.setId(id); o.setRouteId("R1"); o.setWeightKg(1000);
@@ -42,7 +42,7 @@ class DominoTest {
         return o;
     }
 
-    // ASSIGNED order — next in queue for the same truck, will be delayed by truck's current delivery
+    // Nalog u statusu ASSIGNED — sledeći u redu za isti kamion, biće odložen zbog tekuće dostave
     private DeliveryOrder waiting(String id, String truckId, OrderPriority priority, double weightKg) {
         DeliveryOrder o = new DeliveryOrder();
         o.setId(id); o.setRouteId("R1"); o.setWeightKg(weightKg);
@@ -66,12 +66,12 @@ class DominoTest {
         return r;
     }
 
-    // ---- tests ----
+    // ---- testovi ----
 
     @Test
     @DisplayName("Domino_DetectPrimary: delayed order cascades to WAITING_UNLOADING order on same truck")
     void primaryDetection() {
-        // O1 is delayed; O2 is waiting for the same truck T1
+        // O1 kasni; O2 čeka isti kamion T1
         DeliveryOrder o1 = delayed("O1", "T1", 30);
         DeliveryOrder o2 = waiting("O2", "T1", OrderPriority.NORMAL, 1000);
 
@@ -85,9 +85,9 @@ class DominoTest {
     @Test
     @DisplayName("Domino_PropagateChain: cascade spreads to all downstream orders blocked on the same truck")
     void chainPropagation() {
-        // O1 delayed → O2 and O3 both waiting on T1 → both reported as domino-affected
-        // DetectPrimary fires for all WAITING_UNLOADING orders on the same truck;
-        // PropagateChain extends the cascade for any order not yet covered.
+        // O1 kasni → O2 i O3 oba čekaju na T1 → oba se prijavljuju kao domino-zahvaćeni
+        // DetectPrimary se okida za sve ASSIGNED naloge na istom kamionu;
+        // PropagateChain proširuje kaskadu na svaki nalog koji još nije pokriven.
         DeliveryOrder o1 = delayed("O1", "T1", 30);
         DeliveryOrder o2 = waiting("O2", "T1", OrderPriority.NORMAL, 1000);
         DeliveryOrder o3 = waiting("O3", "T1", OrderPriority.NORMAL, 1000);
@@ -104,7 +104,7 @@ class DominoTest {
     @Test
     @DisplayName("Domino_ReplannUrgentOrder: URGENT order affected by domino gets reassigned to free truck")
     void urgentOrderReplanned() {
-        // O1 delayed; O2 (URGENT) waiting on T1; T2 is free and large enough
+        // O1 kasni; O2 (URGENT) čeka na T1; T2 je slobodan i dovoljnog kapaciteta
         DeliveryOrder o1 = delayed("O1", "T1", 30);
         DeliveryOrder o2 = waiting("O2", "T1", OrderPriority.URGENT, 1000);
 
@@ -124,7 +124,7 @@ class DominoTest {
     @Test
     @DisplayName("Domino_Escalation: 3+ cascading delays from one truck trigger escalation alarm")
     void escalationAlarm() {
-        // O1 delayed; O2+O3+O4 all waiting on T1 → 3 DelayPropagations → escalation
+        // O1 kasni; O2+O3+O4 svi čekaju na T1 → 3 DelayPropagation-a → eskalacija
         DeliveryOrder o1 = delayed("O1", "T1", 30);
         DeliveryOrder o2 = waiting("O2", "T1", OrderPriority.NORMAL, 1000);
         DeliveryOrder o3 = waiting("O3", "T1", OrderPriority.NORMAL, 1000);
@@ -143,7 +143,7 @@ class DominoTest {
     @Test
     @DisplayName("Domino_NightMode_Postpone: non-urgent domino order postponed when night mode active and no free truck")
     void nightModePostpone() {
-        // Night mode (hour=23); O1 delayed; O2 (HIGH priority, not URGENT) waiting on T1; no free truck
+        // Noćni režim (hour=23); O1 kasni; O2 (HIGH prioritet, nije URGENT) čeka na T1; nema slobodnog kamiona
         DeliveryOrder o1 = delayed("O1", "T1", 30);
         DeliveryOrder o2 = waiting("O2", "T1", OrderPriority.HIGH, 1000);
 

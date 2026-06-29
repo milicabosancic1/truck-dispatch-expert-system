@@ -17,7 +17,7 @@ end
 
 // LIFECYCLE PRAVILA — event-driven state machine tranzicije naloga
 // Nisu CEP u strogom smislu (nema temporalnih operatora ni vremenskih prozora),
-// ali su u CEP sesiji jer dijele stanje flote s CEP pravilima.
+// ali su u CEP sesiji jer dele stanje flote s CEP pravilima.
 
 // Vozač potvrdio preuzimanje robe -> nalog prelazi u IN_PROGRESS
 rule "Lifecycle_TripStarted"

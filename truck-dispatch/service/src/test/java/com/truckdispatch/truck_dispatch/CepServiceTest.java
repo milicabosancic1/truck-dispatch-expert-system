@@ -168,7 +168,7 @@ class CepServiceTest {
     void vehicleStoppedOnlyForInProgressOrder() {
         long t0 = System.currentTimeMillis() - 21 * 60_000L;
 
-        // Kamion bez aktivnog naloga — alarm se NE smije okidati
+        // Kamion bez aktivnog naloga — alarm se NE sme okidati
         cepService.processEvent(event(FleetEventType.POSITION, "K-IDLE", 0, "45.267,19.833", t0));
         List<String> messages = cepService.processEvent(
                 event(FleetEventType.POSITION, "K-IDLE", 0, "45.267,19.833", t0 + 21 * 60_000L));

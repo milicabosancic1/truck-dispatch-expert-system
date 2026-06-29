@@ -3,7 +3,6 @@ package rules;
 import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
 import com.truckdispatch.truck_dispatch.model.Truck;
 import com.truckdispatch.truck_dispatch.model.Driver;
-import com.truckdispatch.truck_dispatch.model.DelayPropagation;
 import com.truckdispatch.truck_dispatch.model.Alarm;
 import com.truckdispatch.truck_dispatch.model.AlarmType;
 import com.truckdispatch.truck_dispatch.model.OrderStatus;
@@ -14,45 +13,41 @@ global java.util.List messages;
 
 // ACCUMULATE PRAVILA
 
-// SUM: Ukupna tezina dodeljenih naloga po vozacu danas > 20.000kg
+// COLLECT LIST: Svi vozaci koji su prekoracili dozvoljeno radno vreme (> 9h)
 rule "Accumulate_OverloadedDriver"
     salience 30
     no-loop true
     when
-        $driver : Driver($driverId : id)
-        not Alarm(type == AlarmType.OVERLOADED_DRIVER, entityId == $driverId)
-        $total : Number(doubleValue > 20000) from accumulate(
+        not Alarm(type == AlarmType.OVERLOADED_DRIVER, entityId == "FLEET")
+        $overdueDrivers : List(size > 0) from accumulate(
+            Driver(workingHoursToday > 9, $id : id),
+            collectList($id)
+        )
+    then
+        insert(new Alarm(AlarmType.OVERLOADED_DRIVER, "FLEET",
+                $overdueDrivers.size() + " driver(s) exceeded 9h limit: " + $overdueDrivers, $overdueDrivers.size()));
+        messages.add("ALERT: " + $overdueDrivers.size() + " driver(s) exceeded 9h limit: " + $overdueDrivers);
+end
+
+// SUM: Ukupna tezina aktivnih naloga po kamionu prelazi maxCapacityKg
+rule "Accumulate_OverloadedTruck"
+    salience 30
+    no-loop true
+    when
+        $truck : Truck($truckId : id, $maxCap : maxCapacityKg)
+        not Alarm(type == AlarmType.OVERLOADED_TRUCK, entityId == $truckId)
+        $total : Number(doubleValue > $maxCap) from accumulate(
             DeliveryOrder(
                 status == OrderStatus.ASSIGNED || status == OrderStatus.IN_PROGRESS,
-                assignedDriverId == $driverId,
+                assignedTruckId == $truckId,
                 $w : weightKg
             ),
             sum($w)
         )
     then
-        insert(new Alarm(AlarmType.OVERLOADED_DRIVER, $driverId,
-                "Driver " + $driverId + " overloaded: " + $total + "kg today", 0));
-        messages.add("ALERT: driver " + $driverId + " carrying " + $total + "kg today (>20.000kg)");
-end
-
-// COUNT: Broj aktivnih naloga po kamionu > 3
-rule "Accumulate_OverloadedTruck"
-    salience 30
-    no-loop true
-    when
-        $truck : Truck($truckId : id)
-        not Alarm(type == AlarmType.OVERLOADED_TRUCK, entityId == $truckId)
-        $count : Number(intValue > 3) from accumulate(
-            DeliveryOrder(
-                status == OrderStatus.ASSIGNED || status == OrderStatus.IN_PROGRESS,
-                assignedTruckId == $truckId
-            ),
-            count(1)
-        )
-    then
         insert(new Alarm(AlarmType.OVERLOADED_TRUCK, $truckId,
-                "Truck " + $truckId + " has " + $count + " active orders", 0));
-        messages.add("ALERT: truck " + $truckId + " has " + $count + " active orders!");
+                "Truck " + $truckId + " overloaded: " + $total + "kg (max " + $maxCap + "kg)", 0));
+        messages.add("ALERT: truck " + $truckId + " total assigned weight " + $total + "kg exceeds capacity " + $maxCap + "kg!");
 end
 
 // AVERAGE: Prosecno kasnjenje po ruti > 30min (grupisano po routeId)
@@ -89,18 +84,35 @@ rule "Accumulate_TeamHoursWarning"
         messages.add("WARNING: team average working hours=" + $avgHours + "h -- consider shift change!");
 end
 
-// COLLECT LIST: Previse slobodnih kamiona (> 5)
-rule "Accumulate_IdleFleet"
+// COUNT: Previše naloga ceka na raspored (> 5) — sistemski kapacitetni problem
+rule "Accumulate_OrderBacklog"
     salience 30
     no-loop true
     when
-        not Alarm(type == AlarmType.IDLE_FLEET, entityId == "FLEET")
-        $idleList : List(size > 5) from accumulate(
-            Truck(status == TruckStatus.AVAILABLE, $id : id),
-            collectList($id)
+        not Alarm(type == AlarmType.ORDER_BACKLOG, entityId == "FLEET")
+        $count : Number(intValue > 5) from accumulate(
+            DeliveryOrder(status == OrderStatus.WAITING_RESOURCES),
+            count(1)
         )
     then
-        insert(new Alarm(AlarmType.IDLE_FLEET, "FLEET",
-                "Too many idle trucks: " + $idleList, $idleList.size()));
-        messages.add("ALERT: " + $idleList.size() + " idle trucks -- " + $idleList);
+        insert(new Alarm(AlarmType.ORDER_BACKLOG, "FLEET",
+                $count + " orders waiting for resources — fleet capacity insufficient", $count.intValue()));
+        messages.add("ALERT: order backlog — " + $count + " orders in WAITING_RESOURCES, consider additional capacity!");
+end
+
+// COUNT: Kriticno malo slobodnih kamiona (< 2) dok postoje nalozi na cekanju
+rule "Accumulate_FleetShortage"
+    salience 30
+    no-loop true
+    when
+        not Alarm(type == AlarmType.FLEET_SHORTAGE, entityId == "FLEET")
+        exists DeliveryOrder(status == OrderStatus.WAITING_RESOURCES)
+        $available : Number(intValue < 2) from accumulate(
+            Truck(status == TruckStatus.AVAILABLE),
+            count(1)
+        )
+    then
+        insert(new Alarm(AlarmType.FLEET_SHORTAGE, "FLEET",
+                "Fleet shortage: only " + $available + " truck(s) available with orders waiting", 0));
+        messages.add("ALERT: fleet shortage — " + $available + " available truck(s) while orders are WAITING_RESOURCES!");
 end

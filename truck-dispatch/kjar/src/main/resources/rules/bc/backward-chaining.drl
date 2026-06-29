@@ -32,7 +32,7 @@ end
 // što garantuje da su pravila iz pipeline-a (salience 10+) već završila.
 
 
-// Prekomjerna težina tereta (bez zimskih uslova) — uzrokuje UNFEASIBLE
+// Prekomerna težina tereta (bez zimskih uslova) — uzrokuje UNFEASIBLE
 rule "Diagnose_CargoOverweight"
     salience 15
     no-loop true
@@ -81,7 +81,7 @@ rule "Diagnose_AllTrucksBusy"
         insert( new RejectionReason( $id, "AllTrucksBusy", "NoTruckAvailable" ) );
 end
 
-// Kamion postoji i slobodan je, ali svi vozači su prekoračili radno vrijeme
+// Kamion postoji i slobodan je, ali svi vozači su prekoračili radno vreme
 rule "Diagnose_AllDriversOverHours"
     salience 15
     no-loop true
@@ -153,8 +153,8 @@ end
 
 
 // ─── CONNECTOR PRAVILA — salience 14 ───────────────────────────────────────────
-// Popunjava međučvorove hijerarhije TAČNO JEDNOM po nalogu (guard spriječava duplikate).
-// Veza: leaf → roditelj je ubačena gore; ovdje: roditelj → OrderUnassigned.
+// Popunjava međučvorove hijerarhije TAČNO JEDNOM po nalogu (guard sprečava duplikate).
+// Veza: leaf → roditelj je ubačena gore; ovde: roditelj → OrderUnassigned.
 
 rule "Connect_InsufficientCapacity"
     salience 14
@@ -195,7 +195,7 @@ end
 
 // ─── BC DIJAGNOSTIKA — salience 12 ─────────────────────────────────────────────
 // Koristi BC query nad kompletnim lancem za taj nalog.
-// Salience 12 < 14 (connectors) < 15 (diagnostics) — pali se posljednje.
+// Salience 12 < 14 (connectors) < 15 (diagnostics) — pali se poslednje.
 
 rule "BC_Diagnosis_AllCauses"
     salience 12
@@ -219,7 +219,7 @@ query "belongsToOrderCategory" (String item, String category)
       belongsToOrderCategory( $midCategory, category; ) )
 end
 
-// Upozorenje za svaki dodijeljeni nalog koji pripada kategoriji SpecialOrder
+// Upozorenje za svaki dodeljeni nalog koji pripada kategoriji SpecialOrder
 rule "BC_SpecialOrderCheck"
     salience 20
     when

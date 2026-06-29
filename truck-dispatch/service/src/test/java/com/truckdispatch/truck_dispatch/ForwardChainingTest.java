@@ -22,7 +22,7 @@ class ForwardChainingTest {
     @Autowired
     private DispatchService dispatchService;
 
-    // BUILDERS
+    // ---- pomoćne metode ----
 
     private Truck truck(String id, TruckType type, double cap, TruckStatus status,
                         boolean frigo, boolean adr, double fuel, double dist) {
@@ -170,7 +170,7 @@ class ForwardChainingTest {
         @Test
         @DisplayName("Winter reduces effective capacity — order UNFEASIBLE at 0.85 factor")
         void winterReducesCapacity() {
-            // Truck 6000kg × 0.85 = 5100kg effective; order needs 5500kg
+            // Kamion 6000kg × 0.85 = 5100kg efektivno; nalog zahteva 5500kg
             Truck  t = truck("T1", TruckType.LARGE, 6000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
@@ -253,7 +253,7 @@ class ForwardChainingTest {
         @Test
         @DisplayName("Second RASHLADNI order gets WAITING_RESOURCES when frigo truck is busy, not UNFEASIBLE")
         void secondRashladniWaitsWhenFrigoBusy() {
-            // One frigo truck, two RASHLADNI orders — first gets assigned, second must WAIT not UNFEASIBLE
+            // Jedan frigo kamion, dva RASHLADNI naloga — prvi se dodeljuje, drugi mora da čeka, ne UNFEASIBLE
             Truck frigo = truck("TF", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, true, false, 80, 5);
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
             Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
@@ -271,7 +271,7 @@ class ForwardChainingTest {
                     .filter(o -> o.getStatus() == OrderStatus.UNFEASIBLE).count();
             assertThat(assigned).isEqualTo(1);
             assertThat(waiting).isEqualTo(1);
-            assertThat(unfeasible).isEqualTo(0); // frigo truck EXISTS, just busy
+            assertThat(unfeasible).isEqualTo(0); // frigo kamion POSTOJI, samo je zauzet
         }
 
         @Test
@@ -308,7 +308,7 @@ class ForwardChainingTest {
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
-                    req(15, 22, 6, List.of(t), List.of(d), List.of(r),  // Saturday 22h
+                    req(15, 22, 6, List.of(t), List.of(d), List.of(r),  // Subota 22h
                             List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.HIGH))));
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
@@ -337,8 +337,8 @@ class ForwardChainingTest {
         @Test
         @DisplayName("Non-frigo truck excluded for RASHLADNI — order gets WAITING_RESOURCES")
         void nonFrigoExcludedForRashladni() {
-            // One frigo, one non-frigo; frigo has worse score (further away)
-            // but must be picked because cargo requires it
+            // Jedan frigo, jedan bez frigo; frigo ima lošiji skor (dalje je)
+            // ali mora biti izabran jer to zahteva tip tereta
             Truck tFrigo    = truck("TF", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, true,  false, 80, 20);
             Truck tNoFrigo  = truck("TN", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 3);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
@@ -349,7 +349,7 @@ class ForwardChainingTest {
 
             DeliveryOrder o = find(res, "O1");
             assertThat(o.getStatus()).isEqualTo(OrderStatus.ASSIGNED);
-            assertThat(o.getAssignedTruckId()).isEqualTo("TF"); // must be frigo
+            assertThat(o.getAssignedTruckId()).isEqualTo("TF"); // mora biti frigo
         }
 
         @Test
@@ -370,8 +370,8 @@ class ForwardChainingTest {
         @Test
         @DisplayName("LARGE truck remains allowed on REGIONAL route during morning peak")
         void largeTruckAllowedRegionalMorningPeak() {
-            // During morning peak, LARGE trucks are banned only in city zones.
-            // REGIONAL remains allowed, so the better-scored LARGE truck should be assigned.
+            // Tokom jutarnjeg špica, LARGE kamioni su zabranjeni samo u gradskim zonama.
+            // REGIONAL ostaje dozvoljen, pa LARGE kamion sa boljim skorom treba biti dodeljen.
             Truck tLarge  = truck("TL", TruckType.LARGE,  10000, TruckStatus.AVAILABLE, false, false, 80, 3);
             Truck tMedium = truck("TM", TruckType.MEDIUM, 5000,  TruckStatus.AVAILABLE, false, false, 80, 20);
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
@@ -404,7 +404,7 @@ class ForwardChainingTest {
         @Test
         @DisplayName("MEDIUM truck excluded from CITY road type")
         void mediumTruckNotAllowedOnCityRoute() {
-            // Only SMALL is allowed on CITY; MEDIUM is not → order WAITING_RESOURCES if only MEDIUM available
+            // Samo SMALL je dozvoljen na CITY; MEDIUM nije → nalog u WAITING_RESOURCES ako je dostupan samo MEDIUM
             Truck tMedium = truck("TM", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.CITY, 20, 50, false);
@@ -456,7 +456,7 @@ class ForwardChainingTest {
         @DisplayName("Driver with 8+ working hours is excluded")
         void driverExcludedTooManyHours() {
             Truck  t      = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
-            Driver dTired = driver("DT", true, 8, "CE", false, 2, 5); // workingHours == 8 (not < 8)
+            Driver dTired = driver("DT", true, 8, "CE", false, 2, 5); // workingHours == 8 (nije < 8)
             Driver dFresh = driver("DF", true, 1, "CE", false, 1, 5);
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
@@ -498,8 +498,8 @@ class ForwardChainingTest {
         @DisplayName("Night mode: driver with fatigue=6 excluded (night max is 5)")
         void nightModeFatigueConstraint() {
             Truck  t      = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
-            Driver dTired = driver("DT", true, 1, "CE", false, 6, 5); // fatigue=6 -- allowed normally, blocked at night
-            Driver dFresh = driver("DF", true, 1, "CE", false, 4, 5); // fatigue=4 -- passes night constraint
+            Driver dTired = driver("DT", true, 1, "CE", false, 6, 5); // fatigue=6 -- dozvoljen inače, blokiran noću
+            Driver dFresh = driver("DF", true, 1, "CE", false, 4, 5); // fatigue=4 -- prolazi noćni uslov
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
                     req(10, 22, 3, List.of(t), List.of(dTired, dFresh), List.of(r),
@@ -513,7 +513,7 @@ class ForwardChainingTest {
         @DisplayName("Order gets WAITING_RESOURCES when no driver qualifies")
         void noValidPairWhenNoDriverQualifies() {
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
-            // Driver with 8 working hours — excluded
+            // Vozač sa 8 radnih sati — isključen
             Driver d = driver("D1", true, 8, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
@@ -534,7 +534,7 @@ class ForwardChainingTest {
         @Test
         @DisplayName("Proximity bonus (+25): closer truck wins over same-score truck")
         void proximityBonusWins() {
-            // Both trucks identical except distance; closer gets +25 and should win
+            // Oba kamiona identična osim udaljenosti; bliži dobija +25 i treba da pobedi
             Truck tClose = truck("TC", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Truck tFar   = truck("TF", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 25);
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
@@ -550,8 +550,8 @@ class ForwardChainingTest {
         @Test
         @DisplayName("High utilization bonus (+15): truck loaded >90% of capacity wins")
         void highUtilizationBonus() {
-            // tSmall has capacity 1100; order is 1000kg → 1000/1100 = 91% → bonus
-            // tLarge has capacity 5000; order is 1000kg → 20% → no bonus; also farther
+            // tSmall kapacitet 1100; nalog je 1000kg → 1000/1100 = 91% → bonus
+            // tLarge kapacitet 5000; nalog je 1000kg → 20% → nema bonusa; i dalje je
             Truck tSmall = truck("TS", TruckType.MEDIUM, 1100, TruckStatus.AVAILABLE, false, false, 80, 5);
             Truck tLarge = truck("TL", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
@@ -576,16 +576,16 @@ class ForwardChainingTest {
                     req(15, 10, 3, List.of(tLowFuel, tGoodFuel), List.of(d1, d2), List.of(r),
                             List.of(order("O1", "R1", 1000, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
-            // Low fuel truck: 100 + 25(proximity) - 25(fuel) = 100
-            // Good fuel truck: 100 + 0(proximity) = 100 → same base, but message about fuel malus
+            // Kamion sa malo goriva: 100 + 25(blizina) - 25(gorivo) = 100
+            // Kamion sa dobrim gorivom: 100 + 0(blizina) = 100 → ista osnova, ali poruka o malusu za gorivo
             assertThat(res.getMessages()).anyMatch(m -> m.contains("TL") && m.contains("fuel"));
         }
 
         @Test
         @DisplayName("LOMLJIVO malus (-20): fragile cargo on fast route reduces score")
         void lomljivoMalusOnFastRoute() {
-            // distance=15km (no proximity bonus), fatigue=4 (no fatigue bonus/malus)
-            // LOMLJIVO + HIGHWAY maxSpeedKmh=120 > 80 → score = 100 + 10 (MEDIUM+HIGHWAY template) - 20 = 90
+            // udaljenost=15km (nema bonusa za blizinu), fatigue=4 (nema bonusa/malusa za umor)
+            // LOMLJIVO + HIGHWAY maxSpeedKmh=120 > 80 → skor = 100 + 10 (MEDIUM+HIGHWAY šablon) - 20 = 90
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 15);
             Driver d = driver("D1", true, 1, "CE", false, 4, 5);
             Route  r = new Route();
@@ -612,7 +612,7 @@ class ForwardChainingTest {
                     req(10, 10, 3, List.of(tSmall, tMedium), List.of(d1, d2), List.of(r),
                             List.of(order("O1", "R1", 500, CargoType.STANDARD, 300, OrderPriority.NORMAL))));
 
-            // SMALL+CITY gets template +15; MEDIUM excluded from CITY → only SMALL qualifies
+            // SMALL+CITY dobija šablon +15; MEDIUM isključen iz CITY → samo SMALL prolazi
             assertThat(find(res, "O1").getAssignedTruckId()).isEqualTo("TS");
         }
 
@@ -650,14 +650,14 @@ class ForwardChainingTest {
                     req(15, 10, 3, List.of(t), List.of(d), List.of(r), List.of(oUrgent, oHigh)));
 
             assertThat(find(res, "OU").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
-            // Only one truck/driver — second order must wait
+            // Samo jedan kamion/vozač — drugi nalog mora da čeka
             assertThat(find(res, "OH").getStatus()).isEqualTo(OrderStatus.WAITING_RESOURCES);
         }
 
         @Test
         @DisplayName("Double-assignment prevented: two orders competing for same truck")
         void doubleAssignmentPrevented() {
-            // One truck, two orders — only one can be assigned
+            // Jedan kamion, dva naloga — samo jedan može biti dodeljen
             Truck  t  = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d1 = driver("D1", true, 1, "CE", false, 1, 5);
             Driver d2 = driver("D2", true, 1, "CE", false, 1, 5);
@@ -673,10 +673,10 @@ class ForwardChainingTest {
             long waiting = res.getProcessedOrders().stream()
                     .filter(o -> o.getStatus() == OrderStatus.WAITING_RESOURCES)
                     .count();
-            // Exactly ONE assigned, ONE waiting — truck cannot serve both
+            // Tačno JEDAN dodeljen, JEDAN na čekanju — kamion ne može opslužiti oba
             assertThat(assigned).isEqualTo(1);
             assertThat(waiting).isEqualTo(1);
-            // Verify the assigned truck is T1 (only truck)
+            // Verifikacija da je dodeljeni kamion T1 (jedini kamion)
             res.getProcessedOrders().stream()
                     .filter(o -> o.getStatus() == OrderStatus.ASSIGNED)
                     .forEach(o -> assertThat(o.getAssignedTruckId()).isEqualTo("T1"));
@@ -697,7 +697,7 @@ class ForwardChainingTest {
 
             assertThat(find(res, "O1").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
             assertThat(find(res, "O2").getStatus()).isEqualTo(OrderStatus.ASSIGNED);
-            // Each order must have a different truck
+            // Svaki nalog mora imati drugi kamion
             assertThat(find(res, "O1").getAssignedTruckId())
                     .isNotEqualTo(find(res, "O2").getAssignedTruckId());
         }
@@ -706,7 +706,7 @@ class ForwardChainingTest {
         @DisplayName("PostValidation: refrigeration service warning when >30 days")
         void refrigerationServiceWarning() {
             Truck t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, true, false, 80, 5);
-            t.setDaysSinceRefrigerationService(35); // > 30 → warning
+            t.setDaysSinceRefrigerationService(35); // > 30 → upozorenje
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
             DispatchResult res = dispatchService.processDispatch(
@@ -734,7 +734,7 @@ class ForwardChainingTest {
         @Test
         @DisplayName("Resources consumed by priority order leave secondary order WAITING")
         void resourcesConsumedLeaveSecondWaiting() {
-            // One truck+driver; URGENT order takes the truck; ADR order has no truck left
+            // Jedan kamion+vozač; URGENT nalog zauzima kamion; ADR nalog ostaje bez kamiona
             Truck  t      = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, true, 80, 5);
             Driver dAdr   = driver("DA", true, 1, "CE", true, 1, 5);
             Route  r      = route("R1", RoadType.HIGHWAY, 100, 120, false);
@@ -749,7 +749,7 @@ class ForwardChainingTest {
         }
     }
 
-    // Template-generated rules
+    // Pravila generisana iz šablona
 
     @Nested
     @DisplayName("Template-generated rules")
@@ -758,8 +758,8 @@ class ForwardChainingTest {
         @Test
         @DisplayName("order-priority template: PriorityWaiting fires for HIGH order in WAITING_RESOURCES")
         void priorityWaitingHighOrder() {
-            // Night mode + HIGH priority → order goes WAITING_RESOURCES
-            // PriorityWaiting_HIGH template rule must add [WARN] alert message
+            // Noćni režim + HIGH prioritet → nalog ide u WAITING_RESOURCES
+            // PriorityWaiting_HIGH pravilo šablona mora dodati [WARN] poruku upozorenja
             Truck  t = truck("T1", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 5);
             Driver d = driver("D1", true, 1, "CE", false, 1, 5);
             Route  r = route("R1", RoadType.HIGHWAY, 100, 120, false);
@@ -775,8 +775,8 @@ class ForwardChainingTest {
         @Test
         @DisplayName("operational-mode template: ContextDelayAlert fires for evening-peak order exceeding delay threshold")
         void contextDelayAlertEveningPeak() {
-            // Evening peak (hour=18) → DispatchContext with delayThresholdMin=40
-            // Pre-set IN_PROGRESS order with delayMin=45 > 40 → alert fires
+            // Večernji špic (hour=18) → DispatchContext sa delayThresholdMin=40
+            // Unapred podešen IN_PROGRESS nalog sa delayMin=45 > 40 → okida se upozorenje
             DeliveryOrder o = new DeliveryOrder();
             o.setId("O1"); o.setRouteId("R1"); o.setWeightKg(1000);
             o.setCargoType(CargoType.STANDARD); o.setDeliveryDeadlineMin(300);

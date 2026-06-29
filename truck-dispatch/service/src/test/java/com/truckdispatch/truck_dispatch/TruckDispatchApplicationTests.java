@@ -20,7 +20,7 @@ class TruckDispatchApplicationTests {
     private DispatchService dispatchService;
 
     // -------------------------------------------------------
-    // Shared test data builders
+    // Pomoćne metode za kreiranje test podataka
     // -------------------------------------------------------
 
     private Truck makeTruck(String id, TruckType type, double capacity, TruckStatus status,
@@ -79,7 +79,7 @@ class TruckDispatchApplicationTests {
     }
 
     // -------------------------------------------------------
-    // Test 1: Spring context loads
+    // Test 1: Spring kontekst se učitava
     // -------------------------------------------------------
 
     @Test
@@ -89,10 +89,10 @@ class TruckDispatchApplicationTests {
     }
 
     // -------------------------------------------------------
-    // Test 2: Spec scenario — section 11
+    // Test 2: Scenario iz specifikacije — sekcija 11
     // 07:30 sreda, temp=-3°C
-    // Order 201: rashladna 4800kg  → should be ASSIGNED to K-09 + V-05
-    // Order 202: standardno 2100kg → should be ASSIGNED
+    // Nalog 201: rashladna 4800kg  → treba biti ASSIGNED na K-09 + V-05
+    // Nalog 202: standardno 2100kg → treba biti ASSIGNED
     // -------------------------------------------------------
 
     @Test
@@ -126,33 +126,33 @@ class TruckDispatchApplicationTests {
         System.out.println("=== MESSAGES ===");
         result.getMessages().forEach(System.out::println);
 
-        // Winter context activates
+        // Zimski kontekst se aktivira
         assertThat(result.getMessages()).anyMatch(m -> m.contains("Winter conditions"));
-        // Morning peak activates
+        // Jutarnji špic se aktivira
         assertThat(result.getMessages()).anyMatch(m -> m.contains("Morning peak"));
 
-        // Order 201 should be ASSIGNED (K-09 frigo, 6000*0.85=5100 >= 4800)
+        // Nalog 201 treba biti ASSIGNED (K-09 frigo, 6000*0.85=5100 >= 4800)
         DeliveryOrder assigned201 = result.getProcessedOrders().stream()
                 .filter(o -> o.getId().equals("201")).findFirst().orElseThrow();
         assertThat(assigned201.getStatus()).isEqualTo(OrderStatus.ASSIGNED);
         assertThat(assigned201.getAssignedTruckId()).isEqualTo("K-09");
         assertThat(assigned201.getAssignedDriverId()).isEqualTo("V-05");
 
-        // Order 202 should be ASSIGNED
+        // Nalog 202 treba biti ASSIGNED
         DeliveryOrder assigned202 = result.getProcessedOrders().stream()
                 .filter(o -> o.getId().equals("202")).findFirst().orElseThrow();
         assertThat(assigned202.getStatus()).isEqualTo(OrderStatus.ASSIGNED);
     }
 
     // -------------------------------------------------------
-    // Test 3: Infeasible order — weight exceeds all trucks in winter
+    // Test 3: Neizvodljiv nalog — masa premašuje kapacitet svih kamiona zimi
     // -------------------------------------------------------
 
     @Test
     @DisplayName("Order is UNFEASIBLE when winter reduces capacity below order weight")
     void winterMakesOrderUnfeasible() {
-        // Max truck 6000kg, winter factor 0.85 → effective 5100kg
-        // Order needs 5500kg → unfeasible in winter
+        // Najveći kamion 6000kg, zimski faktor 0.85 → efektivno 5100kg
+        // Nalog zahteva 5500kg → neizvodljivo u zimskim uslovima
         Truck k09 = makeTruck("K-09", TruckType.MEDIUM, 6000, TruckStatus.AVAILABLE, false, false, 80, 5);
         Driver v05 = makeDriver("V-05", true, 2, "C", false, 2, 5);
         Route r1  = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
@@ -176,7 +176,7 @@ class TruckDispatchApplicationTests {
     }
 
     // -------------------------------------------------------
-    // Test 4: Urgent order (deadline < 120min) gets priority
+    // Test 4: Hitni nalog (rok < 120min) dobija prioritet
     // -------------------------------------------------------
 
     @Test
@@ -186,9 +186,9 @@ class TruckDispatchApplicationTests {
         Driver d1   = makeDriver("V-01", true, 1, "C", false, 2, 4);
         Route  r1   = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
 
-        // Urgent order (deadline 90min < 120)
+        // Hitni nalog (rok 90min < 120)
         DeliveryOrder urgent = makeOrder("U-01", "R-01", 2000, CargoType.STANDARD, 90, OrderPriority.NORMAL);
-        // Normal order
+        // Obični nalog
         DeliveryOrder normal = makeOrder("N-01", "R-01", 2000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
 
         DispatchRequest req = new DispatchRequest();
@@ -206,13 +206,13 @@ class TruckDispatchApplicationTests {
 
         DeliveryOrder processedUrgent = result.getProcessedOrders().stream()
                 .filter(o -> o.getId().equals("U-01")).findFirst().orElseThrow();
-        // Urgent order should be AUTO-upgraded and assigned
+        // Hitni nalog treba biti AUTO-upgrejdovan i dodeljen
         assertThat(processedUrgent.getStatus()).isEqualTo(OrderStatus.ASSIGNED);
         assertThat(result.getMessages()).anyMatch(m -> m.contains("URGENT") && m.contains("U-01"));
     }
 
     // -------------------------------------------------------
-    // Test 5: Refrigerated order rejected when no frigo truck
+    // Test 5: Rashladni nalog odbijen kada nema frigo kamiona
     // -------------------------------------------------------
 
     @Test
@@ -241,8 +241,8 @@ class TruckDispatchApplicationTests {
     }
 
     // -------------------------------------------------------
-    // Test 6: Score bonus — familiar route gives higher score
-    // Two identical trucks, but one driver knows the route
+    // Test 6: Score bonus — poznata ruta daje viši skor
+    // Dva identična kamiona, ali jedan vozač poznaje rutu
     // -------------------------------------------------------
 
     @Test
@@ -252,7 +252,7 @@ class TruckDispatchApplicationTests {
         Truck t2 = makeTruck("K-02", TruckType.MEDIUM, 5000, TruckStatus.AVAILABLE, false, false, 80, 15);
 
         Driver dFamiliar = makeDriver("V-FAM", true, 2, "C", false, 3, 4);
-        dFamiliar.setRecentRouteIds(List.of("R-01")); // knows the route → +20
+        dFamiliar.setRecentRouteIds(List.of("R-01")); // poznaje rutu → +20
 
         Driver dUnknown  = makeDriver("V-NEW", true, 2, "C", false, 3, 4);
 
@@ -279,7 +279,7 @@ class TruckDispatchApplicationTests {
     }
 
     // -------------------------------------------------------
-    // Test 7: Night mode — non-urgent orders are postponed
+    // Test 7: Noćni režim — neurgentni nalozi se odlažu
     // -------------------------------------------------------
 
     @Test
@@ -306,12 +306,12 @@ class TruckDispatchApplicationTests {
         assertThat(result.getMessages()).anyMatch(m -> m.contains("Night mode") || m.contains("URGENT"));
         DeliveryOrder processed = result.getProcessedOrders().stream()
                 .filter(o -> o.getId().equals("N-01")).findFirst().orElseThrow();
-        // Night mode: VALID but then blocked by night rule
+        // Noćni režim: nalog je VALID ali ga blokira pravilo noćnog režima
         assertThat(processed.getStatus()).isIn(OrderStatus.WAITING_RESOURCES, OrderStatus.POSTPONED_UNTIL_MORNING);
     }
 
     // -------------------------------------------------------
-    // Test 8: Domino effect — cascading delay
+    // Test 8: Domino efekat — kaskadno kašnjenje
     // -------------------------------------------------------
 
     @Test
@@ -321,13 +321,13 @@ class TruckDispatchApplicationTests {
         Driver driver = makeDriver("V-07", false, 6, "C", false, 4, 5);
         Route route = makeRoute("R-07", RoadType.HIGHWAY, 150, 120, false);
 
-        // Order in progress — delayed 25 min
+        // Nalog u toku — kasni 25 min
         DeliveryOrder n105 = makeOrder("105", "R-07", 2000, CargoType.STANDARD, 60, OrderPriority.NORMAL);
         n105.setStatus(OrderStatus.IN_PROGRESS);
         n105.setAssignedTruckId("K-07");
         n105.setDelayMin(25);
 
-        // Order assigned to same truck — next in queue, will be delayed
+        // Nalog dodeljen istom kamionu — sledeći u redu, biće odložen
         DeliveryOrder n106 = makeOrder("106", "R-07", 1500, CargoType.STANDARD, 90, OrderPriority.NORMAL);
         n106.setStatus(OrderStatus.ASSIGNED);
         n106.setAssignedTruckId("K-07");
@@ -350,13 +350,13 @@ class TruckDispatchApplicationTests {
     }
 
     // -------------------------------------------------------
-    // Test 9: Backward chaining — BC diagnosis activated
+    // Test 9: Unazadni lanac zaključivanja — BC dijagnostika se aktivira
     // -------------------------------------------------------
 
     @Test
     @DisplayName("Backward chaining: all rejection causes found for unassigned order")
     void backwardChainingDiagnosis() {
-        // No trucks at all → order will be WAITING_RESOURCES → BC fires
+        // Nema kamiona uopšte → nalog će biti WAITING_RESOURCES → BC se okida
         Driver driver = makeDriver("V-01", true, 2, "C", false, 2, 4);
         Route  route  = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
         DeliveryOrder order = makeOrder("BC-01", "R-01", 2000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
@@ -365,7 +365,7 @@ class TruckDispatchApplicationTests {
         req.setTemperature(10.0);
         req.setHour(10);
         req.setDayOfWeek(3);
-        req.setTrucks(List.of());     // no trucks
+        req.setTrucks(List.of());     // nema kamiona
         req.setDrivers(List.of(driver));
         req.setRoutes(List.of(route));
         req.setOrders(List.of(order));
@@ -378,26 +378,15 @@ class TruckDispatchApplicationTests {
     }
 
     // -------------------------------------------------------
-    // Test 10: Accumulate — overloaded driver alert
+    // Test 10: Accumulate — alarm za preopterećenog vozača
     // -------------------------------------------------------
 
     @Test
-    @DisplayName("Accumulate: overloaded driver alarm fires when total weight > 20000kg")
+    @DisplayName("Accumulate: overloaded driver alarm fires when driver exceeds 9 working hours")
     void accumulateOverloadedDriver() {
-        Truck  t1  = makeTruck("K-01", TruckType.LARGE, 24000, TruckStatus.BUSY, false, false, 80, 0);
-        Driver drv = makeDriver("V-01", false, 7, "CE", false, 3, 6);
+        Truck  t1  = makeTruck("K-01", TruckType.LARGE, 24000, TruckStatus.AVAILABLE, false, false, 80, 0);
+        Driver drv = makeDriver("V-01", true, 10, "CE", false, 3, 6);
         Route  r   = makeRoute("R-01", RoadType.HIGHWAY, 100, 120, false);
-
-        // Two assigned orders to same driver, total 21000kg
-        DeliveryOrder o1 = makeOrder("O-01", "R-01", 11000, CargoType.STANDARD, 300, OrderPriority.NORMAL);
-        o1.setStatus(OrderStatus.ASSIGNED);
-        o1.setAssignedTruckId("K-01");
-        o1.setAssignedDriverId("V-01");
-
-        DeliveryOrder o2 = makeOrder("O-02", "R-01", 10100, CargoType.STANDARD, 300, OrderPriority.NORMAL);
-        o2.setStatus(OrderStatus.ASSIGNED);
-        o2.setAssignedTruckId("K-01");
-        o2.setAssignedDriverId("V-01");
 
         DispatchRequest req = new DispatchRequest();
         req.setTemperature(10.0);
@@ -406,13 +395,12 @@ class TruckDispatchApplicationTests {
         req.setTrucks(List.of(t1));
         req.setDrivers(List.of(drv));
         req.setRoutes(List.of(r));
-        req.setOrders(List.of(o1, o2));
+        req.setOrders(List.of());
 
         DispatchResult result = dispatchService.processDispatch(req);
-        System.out.println("=== ACCUMULATE MESSAGES ===");
-        result.getMessages().forEach(System.out::println);
 
-        assertThat(result.getMessages()).anyMatch(m -> m.contains("overload") || m.contains("overload") || m.contains("kg today"));
-        assertThat(result.getAlarms()).anyMatch(a -> a.getType() == AlarmType.OVERLOADED_DRIVER);
+        assertThat(result.getMessages()).anyMatch(m -> m.contains("V-01") && m.contains("9h limit"));
+        assertThat(result.getAlarms()).anyMatch(a -> a.getType() == AlarmType.OVERLOADED_DRIVER
+                && "FLEET".equals(a.getEntityId()));
     }
 }
