@@ -1,44 +1,216 @@
 package rules;
 
 import com.truckdispatch.truck_dispatch.model.DeliveryOrder;
+import com.truckdispatch.truck_dispatch.model.Truck;
+import com.truckdispatch.truck_dispatch.model.Driver;
+import com.truckdispatch.truck_dispatch.model.DispatchContext;
 import com.truckdispatch.truck_dispatch.model.RejectionReason;
 import com.truckdispatch.truck_dispatch.model.OrderGroupMembership;
 import com.truckdispatch.truck_dispatch.model.OrderStatus;
+import com.truckdispatch.truck_dispatch.model.OrderPriority;
+import com.truckdispatch.truck_dispatch.model.TruckStatus;
+import com.truckdispatch.truck_dispatch.model.CargoType;
+import com.truckdispatch.truck_dispatch.model.OperationalContext;
 
 global java.util.List messages;
 
-// BACKWARD CHAINING - Query 1: isCauseOfRejection
-// Dijagnostika zašto nalog nije dodeljen — rekurzivno pretražuje lanac uzroka
+// ─── BC QUERY 1: isCauseOfRejection ────────────────────────────────────────────
+// Rekurzivno pretražuje lanac uzroka odbijanja konkretnog naloga (scopovan po orderId).
+// Baza znanja se gradi dinamički — dijagnostičkim pravilima ispod.
 
-query "isCauseOfRejection" (String cause, String effect)
-    RejectionReason( cause == cause, effect == effect )
+query "isCauseOfRejection" (String orderId, String cause, String effect)
+    RejectionReason( orderId == orderId, cause == cause, effect == effect )
     or
-    ( RejectionReason( cause == cause, $intermediate : effect ) and
-      isCauseOfRejection( $intermediate, effect; ) )
+    ( RejectionReason( orderId == orderId, cause == cause, $inter : effect ) and
+      isCauseOfRejection( orderId, $inter, effect; ) )
 end
 
-// Pravilo: dijagnostika kada su zimski uslovi uzrok nedodele
-rule "BC_Diagnosis_Winter"
-    salience 20
+
+// ─── DIJAGNOSTIČKA PRAVILA — salience 15 ───────────────────────────────────────
+// Svako pravilo ubacuje SAMO neposrednu vezu list-čvor → roditeljski čvor.
+// Aktivira se tek nakon što nalog dobije finalni status (UNFEASIBLE / WAITING_RESOURCES),
+// što garantuje da su pravila iz pipeline-a (salience 10+) već završila.
+
+
+// Prekomjerna težina tereta (bez zimskih uslova) — uzrokuje UNFEASIBLE
+rule "Diagnose_CargoOverweight"
+    salience 15
+    no-loop true
     when
-        $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES || status == OrderStatus.UNFEASIBLE)
-        isCauseOfRejection( "WinterReducesCapacity", "OrderUnassigned"; )
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE, $id : id, $weight : weightKg )
+        not DispatchContext( context == OperationalContext.WINTER_CONDITIONS )
+        not Truck( status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight )
     then
-        messages.add("Order " + $order.getId() + " DIAGNOSIS: winter conditions reduced effective capacity - no truck available!");
+        insert( new RejectionReason( $id, "CargoOverweight", "InsufficientCapacity" ) );
 end
 
-// Pravilo: prikazuje sve uzroke nedodele (cause je slobodna promenljiva)
+// Zimski uslovi smanjuju efektivni kapacitet ispod tražene težine — uzrokuje UNFEASIBLE
+rule "Diagnose_WinterReducesCapacity"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE, $id : id, $weight : weightKg )
+        $ctx   : DispatchContext( context == OperationalContext.WINTER_CONDITIONS,
+                                  $factor : capacityFactor )
+        not Truck( status == TruckStatus.AVAILABLE, maxCapacityKg * $factor >= $weight )
+    then
+        insert( new RejectionReason( $id, "WinterReducesCapacity", "InsufficientCapacity" ) );
+end
+
+// U floti ne postoji niti jedan rashladni kamion — uzrokuje UNFEASIBLE za REFRIGERATED nalog
+rule "Diagnose_NoFrigoTruck"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE, $id : id,
+                                cargoType == CargoType.REFRIGERATED )
+        not Truck( hasRefrigerationUnit == true )
+    then
+        insert( new RejectionReason( $id, "NoFrigoTruck", "NoTruckAvailable" ) );
+end
+
+// Svi kamioni dovoljnog kapaciteta su zauzeti (nalog prošao validaciju, ali truck je međutim dodeljen)
+rule "Diagnose_AllTrucksBusy"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id, $weight : weightKg )
+        not Truck( status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight )
+        exists Truck( maxCapacityKg >= $weight )
+    then
+        insert( new RejectionReason( $id, "AllTrucksBusy", "NoTruckAvailable" ) );
+end
+
+// Kamion postoji i slobodan je, ali svi vozači su prekoračili radno vrijeme
+rule "Diagnose_AllDriversOverHours"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id, $weight : weightKg )
+        exists Truck( status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight )
+        not DispatchContext( context == OperationalContext.NIGHT_MODE )
+        not DispatchContext( context == OperationalContext.WEEKEND )
+        not Driver( available == true, workingHoursToday < 8.0 )
+        exists Driver( available == true, workingHoursToday >= 8.0 )
+    then
+        insert( new RejectionReason( $id, "AllDriversOverHours", "NoDriverAvailable" ) );
+end
+
+// Kamion OK i ima vozača s prihvatljivim satima, ali svi su previše umorni
+rule "Diagnose_AllDriversFatigued"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id, $weight : weightKg )
+        exists Truck( status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight )
+        not DispatchContext( context == OperationalContext.NIGHT_MODE )
+        not DispatchContext( context == OperationalContext.WEEKEND )
+        exists Driver( available == true, workingHoursToday < 8.0 )
+        not Driver( available == true, workingHoursToday < 8.0, fatigueLevel < 7 )
+    then
+        insert( new RejectionReason( $id, "AllDriversFatigued", "NoDriverAvailable" ) );
+end
+
+// HAZARDOUS nalog: ADR kamion slobodan, ali nema vozača s ADR licencom i dobrom formom
+rule "Diagnose_NoAdrLicense"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id,
+                                cargoType == CargoType.HAZARDOUS, $weight : weightKg )
+        exists Truck( status == TruckStatus.AVAILABLE, maxCapacityKg >= $weight,
+                      hasAdrEquipment == true )
+        not Driver( available == true, workingHoursToday < 8.0, fatigueLevel < 7,
+                    hasAdrLicense == true )
+    then
+        insert( new RejectionReason( $id, "NoAdrLicense", "NoDriverAvailable" ) );
+end
+
+// Noćni režim: neurgentni nalog odložen do jutra
+rule "Diagnose_NightModeRestriction"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id,
+                                priority != OrderPriority.URGENT,
+                                priority != OrderPriority.CRITICAL_DELIVERY )
+        DispatchContext( context == OperationalContext.NIGHT_MODE )
+    then
+        insert( new RejectionReason( $id, "NightModeRestriction", "OrderUnassigned" ) );
+end
+
+// Vikend: NORMAL prioritet odložen (samo HIGH/URGENT prolaze vikendima)
+rule "Diagnose_WeekendRestriction"
+    salience 15
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES, $id : id,
+                                priority == OrderPriority.NORMAL )
+        DispatchContext( context == OperationalContext.WEEKEND )
+    then
+        insert( new RejectionReason( $id, "WeekendRestriction", "OrderUnassigned" ) );
+end
+
+
+// ─── CONNECTOR PRAVILA — salience 14 ───────────────────────────────────────────
+// Popunjava međučvorove hijerarhije TAČNO JEDNOM po nalogu (guard spriječava duplikate).
+// Veza: leaf → roditelj je ubačena gore; ovdje: roditelj → OrderUnassigned.
+
+rule "Connect_InsufficientCapacity"
+    salience 14
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE ||
+                                status == OrderStatus.WAITING_RESOURCES, $id : id )
+        exists RejectionReason( orderId == $id, effect == "InsufficientCapacity" )
+        not    RejectionReason( orderId == $id, cause == "InsufficientCapacity" )
+    then
+        insert( new RejectionReason( $id, "InsufficientCapacity", "NoTruckAvailable" ) );
+end
+
+rule "Connect_NoTruckAvailable"
+    salience 14
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE ||
+                                status == OrderStatus.WAITING_RESOURCES, $id : id )
+        exists RejectionReason( orderId == $id, effect == "NoTruckAvailable" )
+        not    RejectionReason( orderId == $id, cause == "NoTruckAvailable" )
+    then
+        insert( new RejectionReason( $id, "NoTruckAvailable", "OrderUnassigned" ) );
+end
+
+rule "Connect_NoDriverAvailable"
+    salience 14
+    no-loop true
+    when
+        $order : DeliveryOrder( status == OrderStatus.UNFEASIBLE ||
+                                status == OrderStatus.WAITING_RESOURCES, $id : id )
+        exists RejectionReason( orderId == $id, effect == "NoDriverAvailable" )
+        not    RejectionReason( orderId == $id, cause == "NoDriverAvailable" )
+    then
+        insert( new RejectionReason( $id, "NoDriverAvailable", "OrderUnassigned" ) );
+end
+
+
+// ─── BC DIJAGNOSTIKA — salience 12 ─────────────────────────────────────────────
+// Koristi BC query nad kompletnim lancem za taj nalog.
+// Salience 12 < 14 (connectors) < 15 (diagnostics) — pali se posljednje.
+
 rule "BC_Diagnosis_AllCauses"
-    salience 20
+    salience 12
     when
-        $order : DeliveryOrder(status == OrderStatus.WAITING_RESOURCES || status == OrderStatus.UNFEASIBLE)
-        isCauseOfRejection( $cause, "OrderUnassigned"; )
+        $order : DeliveryOrder( status == OrderStatus.WAITING_RESOURCES ||
+                                status == OrderStatus.UNFEASIBLE, $id : id )
+        isCauseOfRejection( $id, $cause, "OrderUnassigned"; )
     then
-        messages.add("Order " + $order.getId() + " DIAGNOSIS cause: " + $cause);
+        messages.add( "Order " + $id + " DIAGNOSIS cause: " + $cause );
 end
 
-// BACKWARD CHAINING - Query 2: belongsToOrderCategory
-// Hijerarhija tipova naloga — rekurzivna klasifikacija
+
+// ─── BC QUERY 2: belongsToOrderCategory ────────────────────────────────────────
+// Hijerarhija tipova naloga — statička, nije vezana za konkretni nalog.
+// REFRIGERATED / HAZARDOUS → SpecialOrder → GeneralOrder
 
 query "belongsToOrderCategory" (String item, String category)
     OrderGroupMembership( item == item, group == category )
@@ -47,12 +219,13 @@ query "belongsToOrderCategory" (String item, String category)
       belongsToOrderCategory( $midCategory, category; ) )
 end
 
-// Pravilo: specijalni nalog — provjeri opremu kamiona
+// Upozorenje za svaki dodijeljeni nalog koji pripada kategoriji SpecialOrder
 rule "BC_SpecialOrderCheck"
     salience 20
     when
-        $order : DeliveryOrder(status == OrderStatus.ASSIGNED, $type : cargoType.name())
+        $order : DeliveryOrder( status == OrderStatus.ASSIGNED, $type : cargoType.name() )
         belongsToOrderCategory( $type, "SpecialOrder"; )
     then
-        messages.add("Order " + $order.getId() + " is SPECIAL (" + $type + ") - verify truck equipment!");
+        messages.add( "Order " + $order.getId()
+                + " is SPECIAL (" + $type + ") - verify truck equipment!" );
 end

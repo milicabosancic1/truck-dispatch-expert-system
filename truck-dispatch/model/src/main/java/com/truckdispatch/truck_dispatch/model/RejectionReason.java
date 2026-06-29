@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RejectionReason {
+    private String orderId;
     private String cause;
     private String effect;
 }
