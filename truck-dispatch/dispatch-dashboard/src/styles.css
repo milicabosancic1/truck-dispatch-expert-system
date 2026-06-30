@@ -208,6 +208,14 @@ label.checkbox-label input {
   gap: 11px;
 }
 
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
 .form-row.compact {
   grid-template-columns: repeat(3, minmax(140px, 1fr));
 }
@@ -357,11 +365,14 @@ tr:hover td { background: #fbfdff; }
 }
 
 /* Rule trace message coloring */
-.message-list li.msg-success { border-color: #a7f3d0; background: #f0fdf4; color: #065f46; }
-.message-list li.msg-danger  { border-color: #fecaca; background: #fff5f5; color: #991b1b; }
-.message-list li.msg-warn    { border-color: #fde68a; background: #fffbeb; color: #92400e; }
-.message-list li.msg-domino  { border-color: #d8b4fe; background: #faf5ff; color: #6b21a8; }
-.message-list li.msg-muted   { color: #94a3b8; background: #f8fafc; }
+.message-list li.msg-success  { border-color: #a7f3d0; background: #f0fdf4; color: #065f46; }
+.message-list li.msg-danger   { border-color: #fecaca; background: #fff5f5; color: #991b1b; }
+.message-list li.msg-warn     { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.message-list li.msg-domino   { border-color: #d8b4fe; background: #faf5ff; color: #6b21a8; }
+.message-list li.msg-muted    { color: #94a3b8; background: #f8fafc; }
+.message-list li.msg-template { border-color: #99f6e4; background: #f0fdfa; color: #115e59; font-weight: 600; }
+.message-list li.msg-alert    { border-color: #fdba74; background: #fff7ed; color: #7c2d12; }
+.message-list li.msg-info     { border-color: #bae6fd; background: #f0f9ff; color: #0c4a6e; }
 
 .empty-state {
   color: var(--muted);
@@ -570,11 +581,7 @@ tr:hover td { background: #fbfdff; }
 
 /* ── CEP Event Log ───────────────────────────────────────────────────────── */
 .cep-scenarios {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   padding: 10px 12px;
   background: #f8fafc;
   border: 1px solid var(--border-soft);
@@ -582,10 +589,27 @@ tr:hover td { background: #fbfdff; }
 }
 
 .scenario-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--muted);
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin: 0 0 8px;
+}
+
+.scenario-seq {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+.scenario-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .btn-scenario {
@@ -660,6 +684,8 @@ tr:hover td { background: #fbfdff; }
   .panel-header { align-items: stretch; flex-direction: column; }
   .header-actions { justify-content: flex-start; }
   .demo-scenarios { grid-template-columns: repeat(2, 1fr); }
+  .ds-grid { grid-template-columns: repeat(2, 1fr); }
+  .ds-grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ── Fleet status (normal mode, read-only) ────────────────────────────────── */
@@ -1262,11 +1288,7 @@ tr:hover td { background: #fbfdff; }
 
 /* ══ Demo shortcuts ════════════════════════════════════════════════════════ */
 .demo-shortcuts {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: 12px 14px;
   background: #f8fafc;
   border: 1px dashed #cbd5e1;
   border-radius: 8px;
@@ -1274,14 +1296,27 @@ tr:hover td { background: #fbfdff; }
 }
 
 .ds-label {
+  display: block;
   font-size: 11px;
   font-weight: 700;
   color: var(--muted);
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 8px;
+}
+
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.ds-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .ds-btn {
-  padding: 4px 11px;
+  padding: 8px 6px;
   border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #fff;
@@ -1290,19 +1325,11 @@ tr:hover td { background: #fbfdff; }
   cursor: pointer;
   color: #334155;
   transition: background .12s, border-color .12s;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.35;
 }
 .ds-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
-
-.ds-cold:hover     { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
-.ds-adr:hover      { background: #fefce8; border-color: #fcd34d; color: #78350f; }
-.ds-domino:hover   { background: #fff5f5; border-color: #fca5a5; color: #991b1b; }
-.ds-bc:hover       { background: #f5f3ff; border-color: #c4b5fd; color: #5b21b6; }
-.ds-acc:hover      { background: #f0fdf4; border-color: #6ee7b7; color: #065f46; }
-.ds-routecap:hover { background: #fff7ed; border-color: #fdba74; color: #7c2d12; }
-.ds-deadline:hover { background: #fdf4ff; border-color: #d8b4fe; color: #581c87; }
-.ds-fuel:hover    { background: #fefce8; border-color: #fef08a; color: #713f12; }
-.ds-service:hover { background: #f0fdf4; border-color: #86efac; color: #14532d; }
-.ds-hours:hover   { background: #fff1f2; border-color: #fda4af; color: #881337; }
 
 /* ══ BC / Accumulate intro ═════════════════════════════════════════════════ */
 .bc-intro {
@@ -1313,4 +1340,196 @@ tr:hover td { background: #fbfdff; }
   font-size: 13px;
   color: #475467;
   line-height: 1.6;
+}
+
+.acc-fleet-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.acc-fleet-loaded {
+  color: #065f46;
+  font-weight: 600;
+}
+
+/* ══ BC section header (results panel) ════════════════════════════════════ */
+.bc-section {
+  border-left: 4px solid #7c3aed;
+}
+
+.bc-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.bc-title-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.bc-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.bc-title-block h3 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #3b0764;
+  margin-bottom: 3px;
+}
+
+.bc-subtitle {
+  font-size: 12px;
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.badge-bc {
+  background: #ede9fe;
+  color: #5b21b6;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bc-order-id {
+  font-size: 14px;
+  font-weight: 800;
+  color: #3b0764;
+}
+
+/* ══ Accumulate stats section (results panel) ══════════════════════════════ */
+.acc-stats-section {
+  border-left: 4px solid #059669;
+}
+
+.acc-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.acc-section-header h3 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #064e3b;
+  margin-bottom: 3px;
+}
+
+.acc-section-sub {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.badge-acc {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.acc-alarm-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.acc-alarm-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: background .15s;
+}
+
+.acc-alarm-card:hover { background: #f3f4f6; }
+
+/* Per-type left border accent */
+.acc-card-overloaded_driver  { border-left: 4px solid #f59e0b; }
+.acc-card-overloaded_truck   { border-left: 4px solid #ef4444; }
+.acc-card-problematic_route  { border-left: 4px solid #f59e0b; }
+.acc-card-shift_warning      { border-left: 4px solid #f59e0b; }
+.acc-card-fleet_shortage     { border-left: 4px solid #ef4444; }
+.acc-card-order_backlog      { border-left: 4px solid #f59e0b; }
+
+.acc-alarm-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.acc-alarm-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.acc-alarm-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.acc-entity-chip {
+  font-size: 11px;
+  font-weight: 700;
+  background: #e5e7eb;
+  color: #374151;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.acc-count-badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.acc-alarm-msg {
+  font-size: 13px;
+  color: #1f2937;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.acc-alarm-rule {
+  font-size: 11px;
+  color: #6b7280;
+  font-style: italic;
 }

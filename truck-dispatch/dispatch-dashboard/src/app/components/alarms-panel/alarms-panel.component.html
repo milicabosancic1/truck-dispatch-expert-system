@@ -2,10 +2,10 @@
   <div class="panel-header">
     <div>
       <p class="eyebrow">Monitoring</p>
-      <h2>Aktivni alarmi</h2>
+      <h2>Active Alarms</h2>
     </div>
     <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">
-      {{ loading ? 'Učitava…' : '↻ Osveži' }}
+      {{ loading ? 'Loading…' : '↻ Refresh' }}
     </button>
   </div>
 
@@ -13,16 +13,16 @@
 
   <section class="card">
     <div class="section-header">
-      <h3>Lista alarma</h3>
-      <p class="section-meta">{{ alarms.length }} aktivnih alarma</p>
+      <h3>Alarm List</h3>
+      <p class="section-meta">{{ alarms.length }} active alarms</p>
     </div>
     @if (alarms.length === 0 && !loading) {
-      <p class="empty-state compact-empty">Nema aktivnih alarma.</p>
+      <p class="empty-state compact-empty">No active alarms.</p>
     } @else {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Tip</th><th>Entitet</th><th>Poruka</th><th>Broj</th></tr>
+            <tr><th>Type</th><th>Entity</th><th>Message</th><th>Count</th></tr>
           </thead>
           <tbody>
             @for (alarm of alarms; track $index) {

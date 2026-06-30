@@ -9,6 +9,7 @@ import com.truckdispatch.truck_dispatch.model.FleetEvent;
 import com.truckdispatch.truck_dispatch.service.CepService;
 import com.truckdispatch.truck_dispatch.service.DispatchService;
 import com.truckdispatch.truck_dispatch.service.FleetStateService;
+import jakarta.annotation.PostConstruct;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,11 @@ public class DispatchController {
         this.dispatchService = dispatchService;
         this.cepService      = cepService;
         this.fleetState      = fleetState;
+    }
+
+    @PostConstruct
+    public void syncCepOnStartup() {
+        cepService.syncFleetState(fleetState.getTrucks(), fleetState.getActiveOrders());
     }
 
     /**
@@ -80,6 +86,10 @@ public class DispatchController {
         fleetState.replaceDrivers(DefaultFleetSeeder.defaultDrivers());
         fleetState.replaceRoutes(DefaultFleetSeeder.defaultRoutes());
         fleetState.clearOrders();
+        // Reset CEP session so stale alarms and events from previous demos are cleared.
+        cepService.resetSession();
+        // Sync fresh fleet into the new CEP session immediately.
+        cepService.syncFleetState(fleetState.getTrucks(), fleetState.getActiveOrders());
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("trucks",  fleetState.getTrucks());
         state.put("drivers", fleetState.getDrivers());

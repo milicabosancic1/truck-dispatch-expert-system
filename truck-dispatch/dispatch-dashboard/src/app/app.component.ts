@@ -13,13 +13,37 @@ import { DispatchResult } from './models/models';
   styleUrl: './app.component.css'
 })
 export class AppComponent {
-  tab: 'fc' | 'bc' | 'cep' | 'accumulate' | 'fleet' = 'fc';
+  appMode: 'landing' | 'demo' | 'dispatcher' | 'admin' = 'landing';
+  tab: 'fc' | 'cep' | 'accumulate' = 'fc';
+  demoRole: 'dispatcher' | 'admin' = 'dispatcher';
 
   fcResult:  DispatchResult | null = null;
-  bcResult:  DispatchResult | null = null;
   accResult: DispatchResult | null = null;
 
+  get currentRole(): 'dispatcher' | 'admin' {
+    if (this.appMode === 'demo') return this.demoRole;
+    if (this.appMode === 'admin') return 'admin';
+    return 'dispatcher';
+  }
+
+  get isDemo(): boolean { return this.appMode === 'demo'; }
+
+  enter(mode: 'demo' | 'dispatcher' | 'admin') {
+    this.appMode = mode;
+    this.demoRole = 'dispatcher';
+    this.tab = 'fc';
+    this.fcResult = null;
+    this.accResult = null;
+  }
+
+  home() {
+    this.appMode = 'landing';
+    this.demoRole = 'dispatcher';
+    this.tab = 'fc';
+    this.fcResult = null;
+    this.accResult = null;
+  }
+
   onFcResult(r: DispatchResult)  { this.fcResult  = r; }
-  onBcResult(r: DispatchResult)  { this.bcResult  = r; }
   onAccResult(r: DispatchResult) { this.accResult = r; }
 }

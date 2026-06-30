@@ -25,6 +25,7 @@ rule "TruckTypeRoute_@{truckType}_@{routeType}"
         Route(id == $order.routeId, roadType == RoadType.@{routeType})
     then
         modify($pair) { setScore($pair.getScore() + @{scoreBonus}); }
+        messages.add("[TEMPLATE] TruckTypeRoute_@{truckType}_@{routeType}: score +@{scoreBonus} (nalog " + $order.getId() + ")");
 end
 
 end template

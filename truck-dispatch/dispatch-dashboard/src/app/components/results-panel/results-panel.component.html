@@ -1,44 +1,81 @@
 <div class="panel results-panel">
   <div class="panel-header">
     <div>
-      <p class="eyebrow">{{ mode === 'bc' ? 'Backward Chaining' : 'Izlaz engine-a' }}</p>
-      <h2>{{ mode === 'bc' ? 'Dijagnoza odbijanja' : 'Rezultat otpreme' }}</h2>
+      <p class="eyebrow">Engine output</p>
+      <h2>Dispatch Result</h2>
     </div>
   </div>
 
   <section class="summary-strip">
-    <div class="summary-cell success"> <span>Dodeljeno</span>    <strong>{{ assignedCount }}</strong></div>
-    <div class="summary-cell warning"> <span>Čekanje</span>      <strong>{{ waitingCount }}</strong></div>
-    <div class="summary-cell danger">  <span>Problemi</span>     <strong>{{ issueCount }}</strong></div>
-    <div class="summary-cell replanned"><span>Replanirano</span> <strong>{{ replannedCount }}</strong></div>
-    <div class="summary-cell">         <span>Poruke</span>       <strong>{{ result.messages.length }}</strong></div>
+    <div class="summary-cell success"> <span>Assigned</span>   <strong>{{ assignedCount }}</strong></div>
+    <div class="summary-cell warning"> <span>Waiting</span>    <strong>{{ waitingCount }}</strong></div>
+    <div class="summary-cell danger">  <span>Issues</span>     <strong>{{ issueCount }}</strong></div>
+    <div class="summary-cell replanned"><span>Replanned</span> <strong>{{ replannedCount }}</strong></div>
+    <div class="summary-cell">         <span>Messages</span>   <strong>{{ result.messages.length }}</strong></div>
   </section>
 
-  <!-- BC Dijagnoza — aktivira se automatski za svaki neuspeli nalog (ista sesija kao FC pravila) -->
+  <!-- Accumulate alarms — shown as cards when statistical alarms exist -->
+  @if (accumulateAlarms.length > 0) {
+    <section class="card acc-stats-section">
+      <div class="acc-section-header">
+        <div>
+          <h3>Accumulate — statistical alarms</h3>
+          <p class="acc-section-sub">Drools <code>accumulate</code> exceeded thresholds for {{ accumulateAlarms.length }} {{ accumulateAlarms.length === 1 ? 'condition' : 'conditions' }}</p>
+        </div>
+        <span class="badge badge-acc">Accumulate</span>
+      </div>
+      <div class="acc-alarm-grid">
+        @for (alarm of accumulateAlarms; track $index) {
+          <div class="acc-alarm-card acc-card-{{ alarm.type.toLowerCase() }}">
+            <div class="acc-alarm-icon">{{ accAlarmIcon(alarm.type) }}</div>
+            <div class="acc-alarm-body">
+              <div class="acc-alarm-top">
+                <span class="badge badge-alarm-{{ alarm.type.toLowerCase() }}">{{ alarm.type }}</span>
+                <span class="acc-entity-chip">{{ alarm.entityId }}</span>
+                @if (alarm.affectedCount > 0) {
+                  <span class="acc-count-badge">×{{ alarm.affectedCount }}</span>
+                }
+              </div>
+              <p class="acc-alarm-msg">{{ alarm.message }}</p>
+              <p class="acc-alarm-rule">{{ accAlarmRule(alarm.type) }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- BC Diagnosis — triggered automatically for every UNFEASIBLE/WAITING_RESOURCES order -->
   @if (bcDiagnoses.length > 0) {
     <section class="card bc-section">
-      <div class="section-header">
-        <div>
-          <h3>Backward Chaining — Dijagnoza odbijanja</h3>
-          <p class="section-meta">Lanac uzroka za {{ bcDiagnoses.length }} nedodeljenih naloga</p>
+      <div class="bc-section-header">
+        <div class="bc-title-block">
+          <span class="bc-icon">&#x1F50D;</span>
+          <div>
+            <h3>Backward Chaining — Rejection Diagnosis</h3>
+            <p class="bc-subtitle">
+              Drools automatically built the cause chain for {{ bcDiagnoses.length }}
+              {{ bcDiagnoses.length === 1 ? 'unassigned order' : 'unassigned orders' }}
+            </p>
+          </div>
         </div>
-        <span class="badge badge-alarm">Backward Chaining</span>
+        <span class="badge badge-bc">BC Auto</span>
       </div>
-      <p class="bc-auto-note">
-        @if (mode === 'bc') {
-          Nalog je već odbijen. Backward chaining je pretražio radnu memoriju i izgradio lanac uzroka
-          od konkretnog razloga odbijanja do <code>OrderUnassigned</code>.
-        } @else {
-          BC pravila dele istu Drools sesiju sa FC pravilima — dijagnoza se aktivira automatski za svaki
-          <code>UNFEASIBLE</code> / <code>WAITING_RESOURCES</code> nalog.
-        }
-      </p>
+
+      @if (showDemo) {
+        <p class="bc-auto-note">
+          BC rules share the same Drools session with FC rules — diagnosis is triggered automatically
+          for each <code>UNFEASIBLE</code> / <code>WAITING_RESOURCES</code> order and builds the chain
+          backwards from the specific cause to <code>OrderUnassigned</code>.
+        </p>
+      }
+
       @for (diag of bcDiagnoses; track diag.orderId) {
         <div class="bc-card">
           <div class="bc-order-header">
             <span class="badge badge-{{ diag.status.toLowerCase() }}">{{ diag.status }}</span>
-            <strong>Nalog {{ diag.orderId }}</strong>
-            <span class="bc-hop-count">{{ diag.causes.length + 1 }} čvorova u lancu</span>
+            <strong class="bc-order-id">Order {{ diag.orderId }}</strong>
+            <span class="bc-hop-count">{{ diag.causes.length + 1 }} nodes in chain</span>
           </div>
           <div class="bc-chain">
             @for (cause of diag.causes; track cause) {
@@ -52,18 +89,18 @@
     </section>
   }
 
-  <!-- Obrađeni nalozi -->
+  <!-- Processed orders -->
   <section class="card">
     <div class="section-header">
-      <h3>Obrađeni nalozi</h3>
-      <p class="section-meta">{{ result.processedOrders.length }} naloga obrađeno</p>
+      <h3>Processed Orders</h3>
+      <p class="section-meta">{{ result.processedOrders.length }} orders processed</p>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>ID</th><th>Destinacija</th><th>Status</th>
-            <th>Prioritet</th><th>Teret</th><th>Kamion</th><th>Vozač</th><th>Kašnjenje</th>
+            <th>ID</th><th>Destination</th><th>Status</th>
+            <th>Priority</th><th>Cargo</th><th>Truck</th><th>Driver</th><th>Delay</th>
           </tr>
         </thead>
         <tbody>
@@ -84,20 +121,20 @@
     </div>
   </section>
 
-  <!-- Alarmi -->
-  @if (result.alarms.length > 0) {
+  <!-- Alarms (FC/CEP/Domino — accumulate alarms shown above) -->
+  @if (otherAlarms.length > 0) {
     <section class="card">
       <div class="section-header">
-        <h3>Alarmi</h3>
-        <p class="section-meta">{{ result.alarms.length }} aktivnih alarma</p>
+        <h3>Alarms</h3>
+        <p class="section-meta">{{ otherAlarms.length }} active alarms</p>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Tip</th><th>Entitet</th><th>Poruka</th><th>Broj</th></tr>
+            <tr><th>Type</th><th>Entity</th><th>Message</th><th>Count</th></tr>
           </thead>
           <tbody>
-            @for (alarm of result.alarms; track $index) {
+            @for (alarm of otherAlarms; track $index) {
               <tr>
                 <td><span class="badge badge-alarm-{{ alarm.type.toLowerCase() }}">{{ alarm.type }}</span></td>
                 <td class="strong-cell">{{ alarm.entityId }}</td>
@@ -111,14 +148,14 @@
     </section>
   }
 
-  <!-- Trag pravila -->
+  <!-- Rule trace -->
   <section class="card">
     <div class="section-header">
-      <h3>Trag pravila</h3>
-      <p class="section-meta">{{ regularMessages.length }} engine poruka</p>
+      <h3>Rule Trace</h3>
+      <p class="section-meta">{{ regularMessages.length }} engine messages</p>
     </div>
     @if (regularMessages.length === 0) {
-      <p class="empty-state compact-empty">Nema poruka.</p>
+      <p class="empty-state compact-empty">No messages.</p>
     } @else {
       <ul class="message-list">
         @for (msg of regularMessages; track $index) {

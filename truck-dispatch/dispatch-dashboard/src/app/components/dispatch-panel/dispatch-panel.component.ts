@@ -14,7 +14,8 @@ import {
   styleUrl: './dispatch-panel.component.css'
 })
 export class DispatchPanelComponent implements OnInit {
-  @Input() mode: 'fc' | 'bc' | 'accumulate' = 'fc';
+  @Input() mode: 'fc' | 'accumulate' = 'fc';
+  @Input() showDemo = false;
   @Output() resultReady = new EventEmitter<DispatchResult>();
 
   loading = false;
@@ -41,13 +42,8 @@ export class DispatchPanelComponent implements OnInit {
 
   demoMode = false;
   demoLabel = '';
-  currentScenario: 'cold' | 'adr' | 'domino' | 'bc' | 'acc' | 'routeCap' | 'deadline' | 'fuel' | 'service' | 'hours' | null = null;
+  currentScenario: 'cold' | 'adr' | 'domino' | 'acc' | 'routeCap' | 'deadline' | 'fuel' | 'service' | 'hours' | 'overloaded' | 'delay_route' | null = null;
   showAdvanced = false;
-
-  // BC fleet-aware diagnosis
-  fleetFailedOrders: any[] = [];
-  fleetFailedLoading = false;
-  showCustomScenario = false;
 
   request: DispatchRequest = this.emptyRequest();
 
@@ -56,37 +52,8 @@ export class DispatchPanelComponent implements OnInit {
   constructor(private dispatchService: DispatchService) {}
 
   ngOnInit() {
-    if (this.mode === 'fc') {
-      this.loadFleet();
-    } else if (this.mode === 'bc') {
-      this.loadFleetFailedOrders();
-    }
-  }
-
-  loadFleetFailedOrders() {
-    this.fleetFailedLoading = true;
-    this.dispatchService.getFleet().subscribe({
-      next: fleet => {
-        this.fleetFailedOrders = (fleet.orders || []).filter((o: any) =>
-          o.status === 'WAITING_RESOURCES' || o.status === 'UNFEASIBLE'
-        );
-        this.fleetFailedLoading = false;
-      },
-      error: () => { this.fleetFailedLoading = false; }
-    });
-  }
-
-  diagnoseFleet() {
-    this.loading = true;
-    this.error = '';
-    this.dispatchService.diagnoseFleetFailures().subscribe({
-      next: r => {
-        this.loading = false;
-        this.resultReady.emit(r);
-        this.loadFleetFailedOrders();
-      },
-      error: e => { this.loading = false; this.error = e.message || 'Connection error'; }
-    });
+    if (this.mode === 'fc')         this.loadFleet();
+    if (this.mode === 'accumulate') this.loadFleetForAcc();
   }
 
   // ---- fleet ----
@@ -95,6 +62,22 @@ export class DispatchPanelComponent implements OnInit {
     this.fleetLoading = true;
     this.dispatchService.getFleet().subscribe({
       next: r => { this.fleet = r; this.fleetLoading = false; },
+      error: () => { this.fleetLoading = false; }
+    });
+  }
+
+  loadFleetForAcc() {
+    this.fleetLoading = true;
+    this.dispatchService.getFleet().subscribe({
+      next: r => {
+        this.fleet = r;
+        this.request.trucks  = [...(r.trucks  ?? [])];
+        this.request.drivers = [...(r.drivers ?? [])];
+        this.request.routes  = [...(r.routes  ?? [])];
+        this.request.orders  = (r.orders ?? []).filter((o: any) => o.status !== 'COMPLETED');
+        this.oSeq = 100; this.kSeq = 100; this.vSeq = 100; this.rSeq = 100;
+        this.fleetLoading = false;
+      },
       error: () => { this.fleetLoading = false; }
     });
   }
@@ -181,8 +164,8 @@ export class DispatchPanelComponent implements OnInit {
     this.currentScenario = null;
     this.showAdvanced = false;
     this.error = '';
-    if (this.mode === 'fc') this.loadFleet();
-    else if (this.mode === 'bc') this.loadFleetFailedOrders();
+    if (this.mode === 'fc')         this.loadFleet();
+    if (this.mode === 'accumulate') this.loadFleetForAcc();
   }
 
   submit() {
@@ -279,105 +262,6 @@ export class DispatchPanelComponent implements OnInit {
           maxCapacityKg: 24000, maxSpeedKmh: 90, hasTunnel: false
         }
       ]
-    };
-  }
-
-  // ---- BC dijagnostički scenariji
-  // Nalozi imaju pre-setovan status (UNFEASIBLE / WAITING_RESOURCES).
-  // FC validacija ignorise takve naloge (trazi status == NEW);
-  // BC pravila (salience 12-15) direktno grade lanac uzroka.
-
-  loadBcNoCapacityScenario() {
-    this.demoMode = true;
-    this.demoLabel = 'BC: Nema dovoljnog kapaciteta';
-    this.currentScenario = 'bc';
-    this.oSeq = 2; this.kSeq = 2; this.vSeq = 2; this.rSeq = 2;
-    this.request = {
-      temperature: 15, hour: 10, dayOfWeek: 3,
-      orders: [{
-        id: 'O-1', destination: 'Beograd', weightKg: 8000,
-        cargoType: 'STANDARD', deliveryDeadlineMin: 300,
-        priority: 'NORMAL', status: 'UNFEASIBLE' as any, routeId: 'R-1', delayMin: 0
-      }],
-      trucks: [{
-        id: 'K-1', type: 'SMALL', maxCapacityKg: 2000, status: 'AVAILABLE',
-        location: 'Novi Sad', fuelPercent: 80, hasRefrigerationUnit: false,
-        hasAdrEquipment: false, distanceToOriginKm: 5, daysSinceRefrigerationService: 0
-      }],
-      drivers: [{ id: 'V-1', available: true, workingHoursToday: 3, license: 'CE', hasAdrLicense: false, fatigueLevel: 1, yearsOfExperience: 5, recentRouteIds: [] }],
-      routes: [{ id: 'R-1', roadType: 'HIGHWAY', distanceKm: 90, estimatedTimeHours: 1, maxCapacityKg: 24000, maxSpeedKmh: 120, hasTunnel: false }]
-    };
-  }
-
-  loadBcRouteCapScenario() {
-    this.demoMode = true;
-    this.demoLabel = 'BC: Kapacitet rute prekoračen';
-    this.currentScenario = 'routeCap';
-    this.oSeq = 2; this.kSeq = 2; this.vSeq = 2; this.rSeq = 2;
-    this.request = {
-      temperature: 15, hour: 10, dayOfWeek: 3,
-      orders: [{
-        id: 'O-1', destination: 'Prijepolje', weightKg: 8000,
-        cargoType: 'STANDARD', deliveryDeadlineMin: 300,
-        priority: 'NORMAL', status: 'UNFEASIBLE' as any, routeId: 'R-1', delayMin: 0
-      }],
-      trucks: [{ id: 'K-1', type: 'LARGE', maxCapacityKg: 18000, status: 'AVAILABLE', location: 'Novi Sad', fuelPercent: 90, hasRefrigerationUnit: false, hasAdrEquipment: false, distanceToOriginKm: 5, daysSinceRefrigerationService: 0 }],
-      drivers: [{ id: 'V-1', available: true, workingHoursToday: 3, license: 'CE', hasAdrLicense: false, fatigueLevel: 1, yearsOfExperience: 5, recentRouteIds: [] }],
-      routes: [{ id: 'R-1', roadType: 'LOCAL', distanceKm: 110, estimatedTimeHours: 2.5, maxCapacityKg: 5000, maxSpeedKmh: 60, hasTunnel: false }]
-    };
-  }
-
-  loadBcFuelScenario() {
-    this.demoMode = true;
-    this.demoLabel = 'BC: Nedovoljno goriva za rutu';
-    this.currentScenario = 'fuel';
-    this.oSeq = 2; this.kSeq = 2; this.vSeq = 2; this.rSeq = 2;
-    this.request = {
-      temperature: 15, hour: 10, dayOfWeek: 3,
-      orders: [{
-        id: 'O-1', destination: 'Beograd', weightKg: 2000,
-        cargoType: 'STANDARD', deliveryDeadlineMin: 300,
-        priority: 'NORMAL', status: 'WAITING_RESOURCES' as any, routeId: 'R-1', delayMin: 0
-      }],
-      trucks: [{ id: 'K-1', type: 'MEDIUM', maxCapacityKg: 5000, status: 'AVAILABLE', location: 'Novi Sad', fuelPercent: 5, hasRefrigerationUnit: false, hasAdrEquipment: false, distanceToOriginKm: 5, daysSinceRefrigerationService: 0 }],
-      drivers: [{ id: 'V-1', available: true, workingHoursToday: 3, license: 'CE', hasAdrLicense: false, fatigueLevel: 1, yearsOfExperience: 5, recentRouteIds: [] }],
-      routes: [{ id: 'R-1', roadType: 'REGIONAL', distanceKm: 80, estimatedTimeHours: 2.0, maxCapacityKg: 24000, maxSpeedKmh: 90, hasTunnel: false }]
-    };
-  }
-
-  loadBcServiceScenario() {
-    this.demoMode = true;
-    this.demoLabel = 'BC: Servis rashladnog prekoračen';
-    this.currentScenario = 'service';
-    this.oSeq = 2; this.kSeq = 2; this.vSeq = 2; this.rSeq = 2;
-    this.request = {
-      temperature: 4, hour: 8, dayOfWeek: 2,
-      orders: [{
-        id: 'O-1', destination: 'Beograd', weightKg: 2000,
-        cargoType: 'REFRIGERATED', deliveryDeadlineMin: 180,
-        priority: 'NORMAL', status: 'WAITING_RESOURCES' as any, routeId: 'R-1', delayMin: 0
-      }],
-      trucks: [{ id: 'K-1', type: 'MEDIUM', maxCapacityKg: 5000, status: 'AVAILABLE', location: 'Novi Sad', fuelPercent: 80, hasRefrigerationUnit: true, hasAdrEquipment: false, distanceToOriginKm: 5, daysSinceRefrigerationService: 45 }],
-      drivers: [{ id: 'V-1', available: true, workingHoursToday: 3, license: 'CE', hasAdrLicense: false, fatigueLevel: 1, yearsOfExperience: 5, recentRouteIds: [] }],
-      routes: [{ id: 'R-1', roadType: 'REGIONAL', distanceKm: 80, estimatedTimeHours: 2.0, maxCapacityKg: 24000, maxSpeedKmh: 90, hasTunnel: false }]
-    };
-  }
-
-  loadBcDriverHoursScenario() {
-    this.demoMode = true;
-    this.demoLabel = 'BC: Vozač prekoračio bi radno vreme';
-    this.currentScenario = 'hours';
-    this.oSeq = 2; this.kSeq = 2; this.vSeq = 2; this.rSeq = 2;
-    this.request = {
-      temperature: 15, hour: 16, dayOfWeek: 3,
-      orders: [{
-        id: 'O-1', destination: 'Beograd', weightKg: 2000,
-        cargoType: 'STANDARD', deliveryDeadlineMin: 300,
-        priority: 'NORMAL', status: 'WAITING_RESOURCES' as any, routeId: 'R-1', delayMin: 0
-      }],
-      trucks: [{ id: 'K-1', type: 'MEDIUM', maxCapacityKg: 5000, status: 'AVAILABLE', location: 'Novi Sad', fuelPercent: 80, hasRefrigerationUnit: false, hasAdrEquipment: false, distanceToOriginKm: 5, daysSinceRefrigerationService: 0 }],
-      drivers: [{ id: 'V-1', available: true, workingHoursToday: 6.5, license: 'CE', hasAdrLicense: false, fatigueLevel: 3, yearsOfExperience: 5, recentRouteIds: [] }],
-      routes: [{ id: 'R-1', roadType: 'REGIONAL', distanceKm: 80, estimatedTimeHours: 2.0, maxCapacityKg: 24000, maxSpeedKmh: 90, hasTunnel: false }]
     };
   }
 
@@ -585,6 +469,60 @@ export class DispatchPanelComponent implements OnInit {
       }]
     };
     this.oSeq = 7; this.kSeq = 2; this.vSeq = 4; this.rSeq = 2;
+  }
+
+  loadOverloadedTruckDemo() {
+    this.demoMode = true;
+    this.demoLabel = 'Overloaded Truck';
+    this.currentScenario = 'overloaded';
+    this.oSeq = 4; this.kSeq = 2; this.vSeq = 2; this.rSeq = 2;
+    this.request = {
+      temperature: 15, hour: 10, dayOfWeek: 3,
+      orders: [
+        { id: 'O-1', destination: 'Beograd',   weightKg: 1500, cargoType: 'STANDARD', deliveryDeadlineMin: 300, priority: 'NORMAL', status: 'ASSIGNED' as any, routeId: 'R-1', assignedTruckId: 'K-1', delayMin: 0 },
+        { id: 'O-2', destination: 'Novi Sad',   weightKg: 1500, cargoType: 'STANDARD', deliveryDeadlineMin: 300, priority: 'NORMAL', status: 'ASSIGNED' as any, routeId: 'R-1', assignedTruckId: 'K-1', delayMin: 0 },
+        { id: 'O-3', destination: 'Zrenjanin',  weightKg: 1500, cargoType: 'STANDARD', deliveryDeadlineMin: 300, priority: 'NORMAL', status: 'ASSIGNED' as any, routeId: 'R-1', assignedTruckId: 'K-1', delayMin: 0 },
+      ],
+      trucks: [{
+        id: 'K-1', type: 'MEDIUM', maxCapacityKg: 4000, status: 'BUSY',
+        location: 'Novi Sad', fuelPercent: 80, hasRefrigerationUnit: false,
+        hasAdrEquipment: false, distanceToOriginKm: 0, daysSinceRefrigerationService: 0
+      }],
+      drivers: [{
+        id: 'V-1', available: true, workingHoursToday: 5, license: 'CE',
+        hasAdrLicense: false, fatigueLevel: 2, yearsOfExperience: 5, recentRouteIds: []
+      }],
+      routes: [{
+        id: 'R-1', roadType: 'REGIONAL', distanceKm: 80, estimatedTimeHours: 1,
+        maxCapacityKg: 24000, maxSpeedKmh: 90, hasTunnel: false
+      }]
+    };
+  }
+
+  loadAvgDelayDemo() {
+    this.demoMode = true;
+    this.demoLabel = 'Route Avg Delay';
+    this.currentScenario = 'delay_route';
+    this.oSeq = 3; this.kSeq = 3; this.vSeq = 2; this.rSeq = 2;
+    this.request = {
+      temperature: 15, hour: 10, dayOfWeek: 3,
+      orders: [
+        { id: 'O-1', destination: 'Beograd', weightKg: 1000, cargoType: 'STANDARD', deliveryDeadlineMin: 300, priority: 'NORMAL', status: 'IN_PROGRESS' as any, routeId: 'R-1', assignedTruckId: 'K-1', delayMin: 35 },
+        { id: 'O-2', destination: 'Beograd', weightKg: 1000, cargoType: 'STANDARD', deliveryDeadlineMin: 300, priority: 'NORMAL', status: 'IN_PROGRESS' as any, routeId: 'R-1', assignedTruckId: 'K-2', delayMin: 45 },
+      ],
+      trucks: [
+        { id: 'K-1', type: 'MEDIUM', maxCapacityKg: 5000, status: 'BUSY', location: 'Beograd', fuelPercent: 80, hasRefrigerationUnit: false, hasAdrEquipment: false, distanceToOriginKm: 0, daysSinceRefrigerationService: 0 },
+        { id: 'K-2', type: 'MEDIUM', maxCapacityKg: 5000, status: 'BUSY', location: 'Beograd', fuelPercent: 75, hasRefrigerationUnit: false, hasAdrEquipment: false, distanceToOriginKm: 0, daysSinceRefrigerationService: 0 },
+      ],
+      drivers: [{
+        id: 'V-1', available: true, workingHoursToday: 5, license: 'CE',
+        hasAdrLicense: false, fatigueLevel: 2, yearsOfExperience: 5, recentRouteIds: []
+      }],
+      routes: [{
+        id: 'R-1', roadType: 'REGIONAL', distanceKm: 80, estimatedTimeHours: 1,
+        maxCapacityKg: 24000, maxSpeedKmh: 90, hasTunnel: false
+      }]
+    };
   }
 
   // ---- CRUD ----

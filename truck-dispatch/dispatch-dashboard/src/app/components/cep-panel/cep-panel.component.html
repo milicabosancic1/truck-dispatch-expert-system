@@ -5,22 +5,22 @@
       <h2>Fleet Events (CEP / Drools Fusion)</h2>
     </div>
     <button class="btn-link" (click)="refreshFleet()">
-      {{ fleetLoading ? 'Učitava…' : '↻ Osveži stanje' }}
+      {{ fleetLoading ? 'Loading…' : '↻ Refresh state' }}
     </button>
   </div>
 
   <!-- ── 1. FLEET STATE ── -->
   <section class="card cep-fleet-card">
     <div class="section-header">
-      <h3>Trenutno stanje flote</h3>
-      <p class="section-meta">Kamioni i aktivni nalozi — koristiti ID-eve u formama ispod</p>
+      <h3>Current Fleet State</h3>
+      <p class="section-meta">Trucks and active orders — use IDs in the forms below</p>
     </div>
     @if (fleetLoading) {
-      <p class="muted-text">Učitava…</p>
+      <p class="muted-text">Loading…</p>
     } @else {
       <div class="cep-fleet-grid">
         <div>
-          <p class="cep-fleet-label">Kamioni</p>
+          <p class="cep-fleet-label">Trucks</p>
           <div class="cep-chip-row">
             @for (t of fleetTrucks; track t.id) {
               <span class="cep-truck-chip" [class]="truckStatusClass(t.status)">
@@ -29,12 +29,12 @@
               </span>
             }
             @if (fleetTrucks.length === 0) {
-              <span class="muted-text">Nema podataka — pokrenite FC otpremu ili resetujte flotu</span>
+              <span class="muted-text">No data — run FC dispatch or reset the fleet</span>
             }
           </div>
         </div>
         <div>
-          <p class="cep-fleet-label">Aktivni nalozi</p>
+          <p class="cep-fleet-label">Active Orders</p>
           <div class="cep-chip-row">
             @for (o of fleetOrders; track o.id) {
               <span class="cep-order-chip">
@@ -44,7 +44,7 @@
               </span>
             }
             @if (fleetOrders.length === 0) {
-              <span class="muted-text">Nema aktivnih naloga</span>
+              <span class="muted-text">No active orders</span>
             }
           </div>
         </div>
@@ -57,8 +57,8 @@
     <section class="card cep-alarms-card">
       <div class="section-header">
         <div>
-          <h3>Aktivni alarmi CEP sesije</h3>
-          <p class="section-meta">{{ activeAlarms.length }} alarm/a u working memory</p>
+          <h3>Active CEP Session Alarms</h3>
+          <p class="section-meta">{{ activeAlarms.length }} alarm(s) in working memory</p>
         </div>
         <span class="badge badge-alarm">CEP Alarms</span>
       </div>
@@ -81,47 +81,57 @@
   <!-- ── 3. SEND EVENT ── -->
   <section class="card">
     <div class="section-header">
-      <h3>Pošalji event</h3>
-      <p class="section-meta">Drools Fusion stream session — temporal CEP pravila</p>
+      <h3>Send Event</h3>
+      <p class="section-meta">Drools Fusion stream session — temporal CEP rules</p>
     </div>
 
-    <!-- Lifecycle scenariji -->
+    <!-- Lifecycle scenarios -->
     <div class="cep-scenarios">
-      <span class="scenario-label">Lifecycle naloga:</span>
-      <button class="btn btn-scenario btn-lifecycle" (click)="loadScenario('trip_started')">🚛 Trip Started</button>
-      <button class="btn btn-scenario btn-lifecycle" (click)="loadScenario('delivery_confirmed')">✅ Delivery Confirmed</button>
+      <p class="scenario-label">Order Lifecycle <span class="scenario-seq">— 1 → 2 → 3 · requires prior FC dispatch</span></p>
+      <div class="scenario-btns">
+        <button class="btn btn-scenario btn-lifecycle" (click)="loadScenario('trip_started')">🚛 1. Trip Started</button>
+        <button class="btn btn-scenario btn-lifecycle" (click)="loadScenario('unloading_started')">📦 2. Unloading Started</button>
+        <button class="btn btn-scenario btn-lifecycle" (click)="loadScenario('delivery_confirmed')">✅ 3. Delivery Confirmed</button>
+      </div>
     </div>
 
-    <!-- Temporal/incident scenariji -->
+    <!-- Temporal / incident scenarios -->
     <div class="cep-scenarios">
-      <span class="scenario-label">Incidenti i temporalni paterni:</span>
-      <button class="btn btn-scenario" (click)="loadScenario('breakdown')">🔧 Kvar</button>
-      <button class="btn btn-scenario" (click)="loadScenario('delay')">⏱ Kašnjenje</button>
-      <button class="btn btn-scenario ds-fuel" (click)="runFuelDrop()" [disabled]="loading">⛽ Pad goriva 80%→62% (CEP_FuelDrop)</button>
-      <button class="btn btn-scenario ds-acc" (click)="runOrderSpike()" [disabled]="loading">📦 Order Spike — 5× NEW_ORDER (CEP_OrderSpike)</button>
+      <p class="scenario-label">Incidents & Temporal <span class="scenario-seq">— DelayEscalation 3×/30min · FuelDrop &gt;15%/10min · OrderSpike 5/15min · VehicleStopped &gt;20min</span></p>
+      <div class="scenario-btns">
+        <button class="btn btn-scenario" (click)="loadScenario('breakdown')">🔧 Breakdown</button>
+        <button class="btn btn-scenario" (click)="loadScenario('delay')">⏱ Delay</button>
+        <button class="btn btn-scenario" (click)="runDelayEscalation()" [disabled]="loading">⏱×3 Delay Escalation</button>
+        <button class="btn btn-scenario" (click)="runFuelDrop()" [disabled]="loading">⛽ Fuel Drop 80→62%</button>
+        <button class="btn btn-scenario" (click)="runOrderSpike()" [disabled]="loading">📦 Order Spike ×5</button>
+        <button class="btn btn-scenario" (click)="runVehicleStopped()" [disabled]="loading">📍 Vehicle Stopped</button>
+      </div>
     </div>
-    <p class="cep-temporal-note">
-      <strong>Temporalni prozori:</strong>
-      CEP_DelayEscalation — 3 kašnjenja / 30 min &nbsp;·&nbsp;
-      CEP_FuelDrop — pad &gt;15% / 10 min &nbsp;·&nbsp;
-      CEP_OrderSpike — 5 naloga / 15 min &nbsp;·&nbsp;
-      CEP_VehicleStopped — ista pozicija &gt;20 min
-    </p>
 
-    <!-- Forma za ručni event -->
+    <!-- Manual event form -->
     <div class="form-row">
-      <label>Tip eventa
+      <label>Event Type
         <select [(ngModel)]="event.type">
           @for (t of eventTypes; track t) { <option [value]="t">{{ t }}</option> }
         </select>
       </label>
-      <label>Entity ID (kamion/nalog)<input [(ngModel)]="event.entityId" placeholder="npr. K-01 ili O-1" /></label>
-      <label>Value<input type="number" [(ngModel)]="event.value" placeholder="kašnjenje min / gorivo % / …" /></label>
-      <label>Location<input [(ngModel)]="event.location" placeholder="npr. Novi Sad" /></label>
+      <label>Entity ID (truck/order)<input [(ngModel)]="event.entityId" placeholder="e.g. K-1 or O-1" /></label>
+      <label>Value
+        <input type="number" [(ngModel)]="event.value" placeholder="delay min / fuel % / …" />
+        <span class="field-hint">
+          @switch (event.type) {
+            @case ('FUEL_LEVEL')          { % fuel (e.g. 80 or 62) — required for CEP_FuelDrop }
+            @case ('DELAY')               { delay minutes (e.g. 30) }
+            @case ('BREAKDOWN')           { 1 }
+            @default                      { not used — leave 0 }
+          }
+        </span>
+      </label>
+      <label>Location<input [(ngModel)]="event.location" placeholder="e.g. Novi Sad" /></label>
     </div>
     <div class="form-actions">
       <button class="btn btn-primary" (click)="send()" [disabled]="loading || !event.entityId">
-        {{ loading ? 'Šalje se…' : 'Pošalji event' }}
+        {{ loading ? 'Sending…' : 'Send Event' }}
       </button>
     </div>
 
@@ -134,8 +144,8 @@
       <div class="section-header">
         <h3>Event Log</h3>
         <div style="display:flex;gap:8px;align-items:center">
-          <p class="section-meta">{{ eventLog.length }} poslato</p>
-          <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px" (click)="clearLog()">Obriši</button>
+          <p class="section-meta">{{ eventLog.length }} sent</p>
+          <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px" (click)="clearLog()">Clear</button>
         </div>
       </div>
       @for (entry of eventLog; track $index) {
@@ -157,7 +167,7 @@
               @for (msg of entry.messages; track $index) { <li>{{ msg }}</li> }
             </ul>
           } @else {
-            <p class="event-no-response">Nema odgovora od engine-a za ovaj event.</p>
+            <p class="event-no-response">No response from engine for this event.</p>
           }
         </div>
       }

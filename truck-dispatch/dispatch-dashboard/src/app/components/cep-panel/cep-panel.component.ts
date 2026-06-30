@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, concat } from 'rxjs';
+import { toArray } from 'rxjs/operators';
 import { DispatchService } from '../../services/dispatch.service';
 import { Alarm, FleetEvent, FleetEventType } from '../../models/models';
 
@@ -68,7 +69,7 @@ export class CepPanelComponent implements OnInit {
         this.loading = false;
         this.refreshFleet();
       },
-      error: err => { this.error = err.message || 'Greška pri slanju'; this.loading = false; }
+      error: err => { this.error = err.message || 'Error sending event'; this.loading = false; }
     });
   }
 
@@ -89,7 +90,7 @@ export class CepPanelComponent implements OnInit {
         this.loading = false;
         this.refreshFleet();
       },
-      error: err => { this.error = err.message || 'Greška'; this.loading = false; }
+      error: err => { this.error = err.message || 'Error'; this.loading = false; }
     });
   }
 
@@ -97,7 +98,7 @@ export class CepPanelComponent implements OnInit {
   runFuelDrop() {
     this.loading = true;
     this.error = '';
-    const truckId = this.event.entityId || 'K-01';
+    const truckId = this.event.entityId || 'K-1';
     this.dispatchService.sendEvent({ type: 'FUEL_LEVEL', entityId: truckId, value: 80, location: '' })
       .subscribe({
         next: msgs1 => {
@@ -105,7 +106,7 @@ export class CepPanelComponent implements OnInit {
             .subscribe({
               next: msgs2 => {
                 this.addToLog(
-                  { type: 'FUEL_LEVEL', entityId: truckId + ' (80%→62%, pad >15%)', value: 0, location: '' },
+                  { type: 'FUEL_LEVEL', entityId: truckId + ' (80%→62%, drop >15%)', value: 0, location: '' },
                   [...msgs1, ...msgs2]
                 );
                 this.loading = false;
@@ -118,18 +119,77 @@ export class CepPanelComponent implements OnInit {
       });
   }
 
-  loadScenario(scenario: 'breakdown' | 'lowfuel' | 'delay' | 'trip_started' | 'delivery_confirmed') {
+  loadScenario(scenario: 'breakdown' | 'lowfuel' | 'delay' | 'trip_started' | 'unloading_started' | 'delivery_confirmed') {
     if (scenario === 'breakdown') {
-      this.event = { type: 'BREAKDOWN', entityId: 'K-01', value: 1, location: 'Autoput E75' };
+      this.event = { type: 'BREAKDOWN', entityId: 'K-1', value: 1, location: 'Autoput E75' };
     } else if (scenario === 'lowfuel') {
-      this.event = { type: 'FUEL_LEVEL', entityId: 'K-01', value: 12, location: 'Novi Sad' };
+      this.event = { type: 'FUEL_LEVEL', entityId: 'K-1', value: 12, location: 'Novi Sad' };
     } else if (scenario === 'trip_started') {
-      this.event = { type: 'TRIP_STARTED', entityId: 'K-01', value: 0, location: '' };
+      this.event = { type: 'TRIP_STARTED', entityId: 'K-1', value: 0, location: '' };
+    } else if (scenario === 'unloading_started') {
+      this.event = { type: 'UNLOADING_STARTED', entityId: 'K-1', value: 0, location: '' };
     } else if (scenario === 'delivery_confirmed') {
-      this.event = { type: 'DELIVERY_CONFIRMED', entityId: 'K-01', value: 0, location: '' };
+      this.event = { type: 'DELIVERY_CONFIRMED', entityId: 'K-1', value: 0, location: '' };
     } else {
-      this.event = { type: 'DELAY', entityId: 'K-01', value: 50, location: 'Beograd' };
+      this.event = { type: 'DELAY', entityId: 'K-1', value: 50, location: 'Beograd' };
     }
+  }
+
+  /** Sends 3 DELAY events sequentially — triggers CEP_DelayEscalation (3 delays in 30min window). */
+  runDelayEscalation() {
+    this.loading = true;
+    this.error = '';
+    const truckId = this.event.entityId || 'K-1';
+    const evt = { type: 'DELAY' as FleetEventType, entityId: truckId, value: 30, location: 'Beograd' };
+    concat(
+      this.dispatchService.sendEvent({ ...evt }),
+      this.dispatchService.sendEvent({ ...evt }),
+      this.dispatchService.sendEvent({ ...evt })
+    ).pipe(toArray()).subscribe({
+      next: results => {
+        this.addToLog(
+          { type: 'DELAY', entityId: truckId + ' (3× delay → escalation)', value: 0, location: '' },
+          results.flat()
+        );
+        this.loading = false;
+        this.refreshFleet();
+      },
+      error: err => { this.error = err.message || 'Error'; this.loading = false; }
+    });
+  }
+
+  /**
+   * Sends 2 POSITION events at the same location with timestamps 21 min apart (simulated).
+   * Triggers CEP_VehicleStopped (ista lokacija >20min).
+   * Requires: FC dispatch + TRIP_STARTED for this truck must be done first
+   * so that an IN_PROGRESS order exists in the CEP session.
+   */
+  runVehicleStopped() {
+    this.loading = true;
+    this.error = '';
+    const truckId = this.event.entityId || 'K-1';
+    const now = Date.now();
+    this.dispatchService.sendEvent({
+      type: 'POSITION', entityId: truckId, value: 0, location: 'Autoput E75', timestamp: now
+    }).subscribe({
+      next: m1 => {
+        this.dispatchService.sendEvent({
+          type: 'POSITION', entityId: truckId, value: 0, location: 'Autoput E75',
+          timestamp: now + 21 * 60 * 1000
+        }).subscribe({
+          next: m2 => {
+            this.addToLog(
+              { type: 'POSITION', entityId: truckId + ' (2× same loc., Δt=21min → VEHICLE_STOPPED)', value: 0, location: '' },
+              [...m1, ...m2]
+            );
+            this.loading = false;
+            this.refreshFleet();
+          },
+          error: err => { this.error = err.message; this.loading = false; }
+        });
+      },
+      error: err => { this.error = err.message; this.loading = false; }
+    });
   }
 
   clearLog() { this.eventLog = []; }
@@ -162,7 +222,7 @@ export class CepPanelComponent implements OnInit {
     this.eventLog.unshift({
       event,
       messages,
-      time: new Date().toLocaleTimeString('sr-Latn', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     });
   }
 }

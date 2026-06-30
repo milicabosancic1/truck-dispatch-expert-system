@@ -27,17 +27,33 @@ import java.util.Map;
 @Service
 public class CepService {
 
-    private final KieSession       cepSession;
+    private KieSession              cepSession;
+    private final KieContainer      kieContainer;
     private final FleetStateService fleetState;
-    private final List<String>     messages = new ArrayList<>();
+    private final List<String>      messages = new ArrayList<>();
 
     private final Map<String, FactHandle> truckHandles = new HashMap<>();
     private final Map<String, FactHandle> orderHandles = new HashMap<>();
 
     public CepService(KieContainer kieContainer, FleetStateService fleetState) {
-        this.cepSession = kieContainer.newKieSession("TruckDispatchCEPSession");
+        this.kieContainer = kieContainer;
+        this.fleetState   = fleetState;
+        this.cepSession   = kieContainer.newKieSession("TruckDispatchCEPSession");
         this.cepSession.setGlobal("messages", messages);
-        this.fleetState = fleetState;
+    }
+
+    /**
+     * Disposes the current CEP session and creates a fresh one.
+     * Clears all events, alarms, and cached fact handles.
+     * Called from DispatchController.resetFleet() so demo resets are clean.
+     */
+    public synchronized void resetSession() {
+        cepSession.dispose();
+        truckHandles.clear();
+        orderHandles.clear();
+        messages.clear();
+        cepSession = kieContainer.newKieSession("TruckDispatchCEPSession");
+        cepSession.setGlobal("messages", messages);
     }
 
     /**
